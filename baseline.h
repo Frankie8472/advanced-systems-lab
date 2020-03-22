@@ -1,6 +1,12 @@
-uint STATE_SIZE;
-uint OBS_SIZE;
-uint TIME_STEPS;
+/*
+    Baseline implementation
+    Not verified yet!
+*/
+
+
+unsigned int STATE_SIZE;
+unsigned int OBS_SIZE;
+unsigned int TIME_STEPS;
 
 
 void forward(int* obs, double* init_prob, double* trans_prob, double* emit_prob,
@@ -131,10 +137,10 @@ void update(int* obs, double* init_prob, double* trans_prob, double* emit_prob,
 
 
 void compute(
-    uint iterations,
-    uint state_size,
-    uint obs_size,
-    uint time_steps,
+    unsigned int iterations,
+    unsigned int state_size,
+    unsigned int obs_size,
+    unsigned int time_steps,
     int* obs,
     double* init_prob,
     double* trans_prob,
@@ -149,7 +155,7 @@ void compute(
     OBS_SIZE = obs_size;
     TIME_STEPS = time_steps;
 
-    for (uint i = 0; i < iterations; i++) {
+    for (unsigned int i = 0; i < iterations; i++) {
         forward(obs, init_prob, trans_prob, emit_prob, alpha, beta, ggamma, sigma);
         backward(obs, init_prob, trans_prob, emit_prob, alpha, beta, ggamma, sigma);
         update(obs, init_prob, trans_prob, emit_prob, alpha, beta, ggamma, sigma);
