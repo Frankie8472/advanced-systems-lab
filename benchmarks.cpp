@@ -17,49 +17,64 @@
 //#include "vector_optimized.h"
 //#include "combined_optimized.h"
 
-
 #define NUM_RUNS 1
 #define CYCLES_REQUIRED 1e8
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
 
-#define N 3 // number of hidden state variables
-#define M 3 // number of observationservations
-#define T 3 // number of time steps
+unsigned int N = 3; // number of hidden state variables
+unsigned int M = 3; // number of observations
+unsigned int T = 3; // number of time steps
 
 unsigned int* observations; //  [T]       [t]       := observationservation of time_step t
-double* init_prob; //           [N]       [i]       := P(X_1 = i)
-double* trans_prob; //          [N][N]    [i][j]    := P(X_t = j | X_(t-1) = i) 
-double* emit_prob; //           [M][N]    [i][j]    := P(Y_t = y_i | X_t = j)
-double* alpha; //               [T][N]    [t][i]    := P(Y_1 = y_1, ..., Y_t = y_t, X_t = i)
-double* beta; //                [T][N]    [t][i]    := P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = i)
-double* ggamma; //              [T][N]    [t][i]    := P(X_t = i | Y)
-double* sigma; //               [T][N][N] [t][i][j] := P(X_t = i, X_(t+1) = j | Y)
+double* init_prob; //           [N]       [n]       := P(X_1 = n)
+double* trans_prob; //          [N][N]    [n0][n1]  := P(X_t = n1 | X_(t-1) = n0)
+double* emit_prob; //           [N][M]    [n][m]    := P(Y_t = y_m | X_t = n)
+double* alpha; //               [T][N]    [t][n]    := P(Y_1 = y_1, ..., Y_t = y_t, X_t = n, theta)
+double* beta; //                [T][N]    [t][n]    := P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = n, theta)
+double* ggamma; //              [T][N]    [t][n]    := P(X_t = n | Y, theta)
+double* sigma; //               [T][N][N] [t][n0][n1] := P(X_t = n0, X_(t+1) = n1 | Y, theta)
+// where theta = {init_prob, trans_rpob, emit_prob} represent the model parameters we want to learn
+// (given some initial configuration)
+
+
+void print_states(unsigned int N, unsigned int M, unsigned int T) {
+    printf("\n");
+    printf("\nInitialization probabilities:\n");
+    for(int n = 0; n < N; n++) {
+        printf("Pr[X_1 = %d] = %f\n", n+1, init_prob[n]);
+    }
+
+    printf("\nTransition probabilities:\n");
+    for(int n0 = 0; n0 < N; n0++) {
+        for(int n1 = 0; n1 < N; n1++) {
+            printf("Pr[X_t = %d | X_(t-1) = %d ] = %f\n", n1+1, n0+1, trans_prob[n0*N + n1]);
+        }
+    }
+
+    printf("\nEmission probabilities:\n");
+    for(int n = 0; n < N; n++) {
+        for(int m = 0; m < M; m++) {
+            printf("Pr[Y_t = %d | X_t = %d] = %f\n", m+1, n+1, emit_prob[n*M + m]);
+        }
+    }
+    printf("\n");
+}
 
 
 void init() {
 
     // uniform
-    for (int i = 0; i < N; i++) {
-        init_prob[i] = 1.f/N;
-        for (int j = 0; j < N; j++) {
-            trans_prob[i*N + j] = 1.f/N;
+    for (int n0 = 0; n0 < N; n0++) {
+        init_prob[n0] = 1.0/N;
+        for (int n1 = 0; n1 < N; n1++) {
+            trans_prob[n0*N + n1] = 1.0/N;
         }
     }
 
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            emit_prob[i*M + j] = 1.f/M;
-        }
-    }
-
-    for (int t = 0; t < T; t++) {
-        for (int j = 0; j < N; j++) {
-            alpha[t*N + j] = 0;
-            beta[t*N + j] = 0;
-            for (int k = 0; k < N; k++) {
-                sigma[(t*N + j)*N + k] = 0;
-            }
+    for (int n = 0; n < N; n++) {
+        for (int m = 0; m < M; m++) {
+            emit_prob[n*M + m] = 1.f/M;
         }
     }
 
@@ -115,22 +130,31 @@ int main(int argc, char **argv) {
         return -1;
     } int max_iterations = atoi(argv[1]);
 
-    uint fp_cost = 0;
+    unsigned int fp_cost = 0;
     fp_cost += 1*T;
     fp_cost += 1*N;
     fp_cost += 1*N*N;
-    fp_cost += 1*M*N;
+    fp_cost += 1*N*M;
     fp_cost += 3*T*N;
     fp_cost += 1*T*N*N;
 
-    observations = (unsigned int *)malloc(T*sizeof(unsigned int));
-    init_prob = (double *)malloc(N*sizeof(double));
-    trans_prob = (double *)malloc(N*N*sizeof(double));
-    emit_prob = (double *)malloc(M*N*sizeof(double));
-    alpha = (double *)malloc(T*N*sizeof(double));
-    beta = (double *)malloc(T*N*sizeof(double));
-    ggamma = (double *)malloc(T*N*sizeof(double));
-    sigma = (double *)malloc(T*N*N*sizeof(double));
+    // calloc initializes to 0.0
+    observations = (unsigned int *)calloc(T, sizeof(unsigned int));
+    if (observations == NULL) exit (1);
+    init_prob = (double *)calloc(N, sizeof(double));
+    if (init_prob == NULL) exit (1);
+    trans_prob = (double *)calloc(N*N, sizeof(double));
+    if (trans_prob == NULL) exit (1);
+    emit_prob = (double *)calloc(N*M, sizeof(double));
+    if (emit_prob == NULL) exit (1);
+    alpha = (double *)calloc(T*N, sizeof(double));
+    if (alpha == NULL) exit (1);
+    beta = (double *)calloc(T*N, sizeof(double));
+    if (beta == NULL) exit (1);
+    ggamma = (double *)calloc(T*N, sizeof(double));
+    if (ggamma == NULL) exit (1);
+    sigma = (double *)calloc(T*N*N, sizeof(double));
+    if (sigma == NULL) exit (1);
 
     // Fill
     init();
@@ -145,21 +169,7 @@ int main(int argc, char **argv) {
     printf("(%d, %lf)\n", T, fp_cost / r);
     printf("\n");
 
-    printf("\nTransition probabilities:\n");
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            printf("state %d -> state %d  %f\n", i+1, j+1, trans_prob[i*N + j]);
-        }
-    }
-
-    printf("\nEmission probabilities:\n");
-    for(int i = 0; i < M; i++) {
-        for(int j = 0; j < N; j++) {
-            printf("state %d : %d  %f\n", i+1, j, emit_prob[i*N + j]);
-        }
-    }
-
-    printf("\n");
+    print_states(N, M, T);
 
     // leakage is bad, mmmkay
     free(observations);

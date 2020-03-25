@@ -5,38 +5,57 @@
 
 #include <cmath>
 
-void forward(unsigned int N, unsigned int M, unsigned int T,
-            unsigned int* obs, double* init_prob, double* trans_prob, double* emit_prob,
-            double* alpha, double* beta, double* ggamma, double* sigma) {
+void forward(
+    unsigned int N,
+    unsigned int M,
+    unsigned int T,
+    unsigned int* observations,
+    double* init_prob,
+    double* trans_prob,
+    double* emit_prob,
+    double* alpha
+) {
 
-    for (int i = 0; i < N; i++) {
-        alpha[0*T + i] = init_prob[i]*emit_prob[obs[0]*N + i];
+    // t = 0, base case
+    for (int n = 0; n < N; n++) {
+        alpha[0*N + n] = init_prob[n]*emit_prob[n*M + observations[0]];
     }
 
     for (int t = 1; t < T; t++) {
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                alpha[t*N + i] += alpha[(t-1)*N + j]*trans_prob[j*N + i];
+        for (int n0 = 0; n0 < N; n0++) {
+
+            for (int n1 = 0; n1 < N; n1++) {
+                alpha[t*N + n0] += alpha[(t-1)*N + n1]*trans_prob[n1*N + n0];
             }
-            alpha[t*N + i] *= emit_prob[obs[t]*N + i];
+
+            alpha[t*N + n0] *= emit_prob[n0*M + observations[t]];
+
         }
     }
+
     return;
 }
 
 
-void backward(unsigned int N, unsigned int M, unsigned int T,
-            unsigned int* obs, double* init_prob, double* trans_prob, double* emit_prob,
-            double* alpha, double* beta, double* ggamma, double* sigma) {
+void backward(
+    unsigned int N,
+    unsigned int M,
+    unsigned int T,
+    unsigned int* observations,
+    double* trans_prob,
+    double* emit_prob,
+    double* beta
+) {
 
-    for (int i = 0; i < N; i++) {
-        beta[(T-1)*N + i] = 1.0;
+    // t = T, base case
+    for (int n = 0; n < N; n++) {
+        beta[(T-1)*N + n] = 1.0;
     }
 
     for (int t = T-2; t >= 0; t--) {
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                beta[t*N + i] += beta[(t+1)*N + j] * trans_prob[i*N + j] * emit_prob[obs[t+1]*N + j];
+        for (int n0 = 0; n0 < N; n0++) {
+            for (int n1 = 0; n1 < N; n1++) {
+                beta[t*N + n0] += beta[(t+1)*N + n1] * trans_prob[n0*N + n1] * emit_prob[n1*M + observations[t+1]];
             }
         }
     }
@@ -45,96 +64,115 @@ void backward(unsigned int N, unsigned int M, unsigned int T,
 }
 
 
-void update(unsigned int N, unsigned int M, unsigned int T,
-            unsigned int* obs, double* init_prob, double* trans_prob, double* emit_prob,
-            double* alpha, double* beta, double* ggamma, double* sigma) {
-
-    double norm;
+void update(
+    unsigned int N,
+    unsigned int M,
+    unsigned int T,
+    unsigned int* observations,
+    double* init_prob,
+    double* trans_prob,
+    double* emit_prob,
+    double* alpha,
+    double* beta,
+    double* ggamma,
+    double* sigma
+) {
 
     // calculate ggamma
     for (int t = 0; t < T; t++) {
 
-        norm = 0.0;
+        double normalization = 0.0;
 
-        for (int i = 0; i < N; i++) {
-            ggamma[t*N + i] = alpha[t*N + i] * beta[t*N + i];
-            norm += alpha[t*N + i] * beta[t*N + i];
+        for (int n = 0; n < N; n++) {
+            normalization += alpha[t*N + n] * beta[t*N + n];
         }
 
-        for (int i = 0; i < N; i++) {
-            ggamma[t*N + i] /= norm;
-
+        for (int n = 0; n < N; n++) {
+            ggamma[t*N + n] = alpha[t*N + n] * beta[t*N + n] / normalization;
         }
+
     }
 
     // calculate sigma
     for (int t = 0; t < T-1; t++) {
 
-        norm = 0.0;
+        double normalization = 0.0;
 
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j ++) {
-                sigma[(t*N + i)*N + j] = alpha[t*N + i] + trans_prob[i*N + j]*beta[(t+1)*N + j]*emit_prob[obs[t+1]*N + j];
-                norm += alpha[t*N + i]*trans_prob[i*N + j]*beta[(t+1)*N + j]*emit_prob[obs[t+1]*N + j];
+        for (int n0 = 0; n0 < N; n0++) {
+            for (int n1 = 0; n1 < N; n1++) {
+                normalization += alpha[t*N + n0]*trans_prob[n0*N + n1]*beta[(t+1)*N + n1]*emit_prob[n1*M + observations[t+1]];
             }
         }
 
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j ++) {
-                sigma[(t*N + i)*N + j] /= norm;
+        for (int n0 = 0; n0 < N; n0++) {
+            for (int n1 = 0; n1 < N; n1++) {
+                sigma[(t*N + n0)*N + n1] = \
+                    alpha[t*N + n0]*trans_prob[n0*N + n1]*beta[(t+1)*N + n1]*emit_prob[n1*M + observations[t+1]] / normalization;
             }
         }
+
     }
 
     // update init_prob
-    for (int i = 0; i < N; i++) {
-        init_prob[i] = ggamma[0*N + i];
+    for (int n = 0; n < N; n++) {
+        init_prob[n] = ggamma[0*N + n];
     }
 
-    // sum up sigma (from t = 0 to T -1)
+    // sum up sigma (from t = 0 to T-1)
     double sigma_sum[N][N];
 
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j ++) {
-            sigma_sum[i][j] = 0.0;
+    for (int n0 = 0; n0 < N; n0++) {
+        for (int n1 = 0; n1 < N; n1++) {
+
+            sigma_sum[n0][n1] = 0.0;
+
             for (int t = 0; t < T-1; t++) {
-                sigma_sum[i][j] += sigma[(t*N + i)*N + j];
+                sigma_sum[n0][n1] += sigma[(t*N + n0)*N + n1];
             }
+
         }
     }
 
     // sum up ggamma (from t = 0 to T-2)
     double ggamma_sum[N];
 
-    for (int i = 0; i < N; i++) {
-        ggamma_sum[i] = 0;
+    for (int n = 0; n < N; n++) {
+
+        ggamma_sum[n] = 0;
+
         for (int t = 0; t < T-1; t++) {
-            ggamma_sum[i] += ggamma[t*N + i];
+            ggamma_sum[n] += ggamma[t*N + n];
         }
+
     }
 
     // update trans_prob
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j ++) {
-            trans_prob[i*N + j] = sigma_sum[i][j] / ggamma_sum[i];
+    for (int n0 = 0; n0 < N; n0++) {
+        for (int n1 = 0; n1 < N; n1++) {
+            trans_prob[n0*N + n1] = sigma_sum[n0][n1] / ggamma_sum[n0];
         }
     }
 
-    // add last Tstep to ggamma_sum
-    for (int i = 0; i < N; i++) {
-        ggamma_sum[i] += ggamma[(T-1)*N + i];
+    // add last T-step to ggamma_sum
+    for (int n = 0; n < N; n++) {
+        ggamma_sum[n] += ggamma[(T-1)*N + n];
     }
 
     // update emit_prob
-    for (int j = 0; j < N; j++) {
-        for (int i = 0; i < M; i++) {
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
 
-            double sum = 0;
+            double ggamma_cond_sum = 0;
 
             for (int t = 0; t < T; t++) {
-                if (obs[t] = i) sum += ggamma[t*N + j];
+
+                if (observations[t] == m) {
+                    ggamma_cond_sum += ggamma[t*N + n];
+                }
+
             }
-            emit_prob[i*N + j] = sum / ggamma_sum[j];
+
+            emit_prob[n*M + m] = ggamma_cond_sum / ggamma_sum[n];
         }
     }
 
@@ -158,8 +196,8 @@ void compute_baum_welch(
     ) {
 
     for (unsigned int i = 0; i < iterations; i++) {
-        forward(N, M, T, observations, init_prob, trans_prob, emit_prob, alpha, beta, ggamma, sigma);
-        backward(N, M, T, observations, init_prob, trans_prob, emit_prob, alpha, beta, ggamma, sigma);
+        forward(N, M, T, observations, init_prob, trans_prob, emit_prob, alpha);
+        backward(N, M, T, observations, trans_prob, emit_prob, beta);
         update(N, M, T, observations, init_prob, trans_prob, emit_prob, alpha, beta, ggamma, sigma);
     }
 
