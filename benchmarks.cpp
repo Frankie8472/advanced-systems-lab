@@ -12,7 +12,6 @@
 
 // all versions (may overwrite each other)
 #include "baseline.h"
-//#include "baseline2.h"
 //#include "sota.h"
 //#include "scalar_optimized.h"
 //#include "vector_optimized.h"
