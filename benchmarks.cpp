@@ -22,7 +22,8 @@
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
 
-void print_states(unsigned int N, unsigned int M, unsigned int T) {
+void print_states(unsigned int N, unsigned int M, unsigned int T,
+    double* init_prob, double* trans_prob, double* emit_prob) {
 
     printf("\n");
     printf("\nInitialization probabilities:\n");
@@ -134,7 +135,7 @@ int main(int argc, char **argv) {
     printf("(%d, %lf)\n", T, fp_cost / cycles);
     printf("\n");
 
-    print_states(N, M, T);
+    print_states(N, M, T, init_prob, trans_prob, emit_prob);
 
     free(observations);
     free(init_prob);

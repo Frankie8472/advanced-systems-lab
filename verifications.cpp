@@ -19,7 +19,8 @@ void test_case_3(void);
 void test_case_4(void);
 void test_case_5(void);
 
-void print_states(unsigned int N, unsigned int M, unsigned int T) {
+void print_states(unsigned int N, unsigned int M, unsigned int T,
+    double* init_prob, double* trans_prob, double* emit_prob) {
 
     printf("\n");
     printf("\nInitialization probabilities:\n");
@@ -98,7 +99,7 @@ void test_case_1(void) {
 
     compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob);
 
-    print_states(N, M, T);
+    print_states(N, M, T, init_prob, trans_prob, emit_prob);
 
     free(observations);
     free(init_prob);
