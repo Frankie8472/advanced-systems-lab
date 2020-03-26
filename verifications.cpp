@@ -13,11 +13,6 @@
 //#include "vector_optimized.h"
 //#include "combined_optimized.h"
 
-unsigned int* observations; //  [K][T]    [k][t]    := observation sequence k at time_step t
-double* init_prob; //           [N]       [n]       := P(X_1 = n)
-double* trans_prob; //          [N][N]    [n0][n1]  := P(X_t = n1 | X_(t-1) = n0)
-double* emit_prob; //           [N][M]    [n][m]    := P(Y_t = y_m | X_t = n)
-
 void test_case_1(void);
 void test_case_2(void);
 void test_case_3(void);
@@ -62,13 +57,13 @@ void test_case_1(void) {
     unsigned int max_iterations = 1000;
 
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
+    unsigned int* observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
     if (observations == NULL) exit(1);
-    init_prob = (double *)calloc(N, sizeof(double));
+    double* init_prob = (double *)calloc(N, sizeof(double));
     if (init_prob == NULL) exit(1);
-    trans_prob = (double *)calloc(N*N, sizeof(double));
+    double* trans_prob = (double *)calloc(N*N, sizeof(double));
     if (trans_prob == NULL) exit(1);
-    emit_prob = (double *)calloc(N*M, sizeof(double));
+    double* emit_prob = (double *)calloc(N*M, sizeof(double));
     if (emit_prob == NULL) exit(1);
 
     observations[0*T + 5] = 1;

@@ -10,35 +10,104 @@
 #include <cmath>
 #include <cstring>
 
+unsigned int K;
+unsigned int N;
+unsigned int M;
+unsigned int T;
+
 // (for each oberservation/training sequence 0 <= k < K)
-double* c_norm; //           [K][T]       [k][t]            :=  scaling factor for numerical stability
-double* alpha; //            [K][T][N]    [k][t][n]         :=  P(Y_1 = y_1, ..., Y_t = y_t, X_t = n, theta)
-double* beta; //             [K][T][N]    [k][t][n]         :=  P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = n, theta)
-double* ggamma; //           [K][T][N]    [k][t][n]         :=  P(X_t = n | Y, theta)
-double* sigma; //            [K][T][N][N] [k][t][n0][n1]    :=  P(X_t = n0, X_(t+1) = n1 | Y, theta)
+unsigned int* observations; //  [K][T]       [k][t]            := observation sequence k at time_step t
+double* init_prob; //           [N]          [n]               := P(X_1 = n)
+double* trans_prob; //          [N][N]       [n0][n1]          := P(X_t = n1 | X_(t-1) = n0)
+double* emit_prob; //           [N][M]       [n][m]            := P(Y_t = y_m | X_t = n)
+double* c_norm; //              [K][T]       [k][t]            :=  scaling factor for numerical stability
+double* alpha; //               [K][T][N]    [k][t][n]         :=  P(Y_1 = y_1, ..., Y_t = y_t, X_t = n, theta)
+double* beta; //                [K][T][N]    [k][t][n]         :=  P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = n, theta)
+double* ggamma; //              [K][T][N]    [k][t][n]         :=  P(X_t = n | Y, theta)
+double* sigma; //               [K][T][N][N] [k][t][n0][n1]    :=  P(X_t = n0, X_(t+1) = n1 | Y, theta)
 // where theta = {init_prob, trans_prob, emit_prob} represent the model parameters we want learn/refine/estimate iteratively.
+double* ggamma_sum; //          [K][N]
+double* sigma_sum; //           [K][N][N]
 
-double* ggamma_sum; //       [K][N]
-double* sigma_sum; //        [K][N][N]
+void forward_step(void);
+void backward_step(void);
+void compute_gamma(void);
+void compute_sigma(void);
+void update_init_prob(void);
+void update_trans_prob(void);
+void update_emit_prob(void);
+
+void compute_baum_welch(
+    unsigned int max_iterations,
+    unsigned int K_local,
+    unsigned int N_local,
+    unsigned int M_local,
+    unsigned int T_local,
+    unsigned int* observations_local,
+    double* init_prob_local,
+    double* trans_prob_local,
+    double* emit_prob_local
+    ) {
+    
+    K = K_local;
+    N = N_local;
+    M = M_local;
+    T = T_local;
+    observations = observations_local;
+    init_prob = init_prob_local;
+    trans_prob = trans_prob_local;
+    emit_prob = emit_prob_local;
+
+    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
+    c_norm = (double *)calloc(K*T, sizeof(double));
+    if (c_norm == NULL) exit(1);
+    alpha = (double *)calloc(K*T*N, sizeof(double));
+    if (alpha == NULL) exit(1);
+    beta = (double *)calloc(K*T*N, sizeof(double));
+    if (beta == NULL) exit(1);
+    ggamma = (double *)calloc(K*T*N, sizeof(double));
+    if (ggamma == NULL) exit(1);
+    sigma = (double *)calloc(K*T*N*N, sizeof(double));
+    if (sigma == NULL) exit(1);
+    ggamma_sum = (double *)calloc(K*N, sizeof(double));
+    if (ggamma_sum == NULL) exit(1);
+    sigma_sum = (double *)calloc(K*N*N, sizeof(double));
+    if (sigma_sum == NULL) exit(1);
+
+    for (int i = 0; i < max_iterations; i++) {
+
+        forward_step();
+        backward_step();
+        compute_gamma();
+        compute_sigma();
+        update_init_prob();
+        update_trans_prob();
+        update_emit_prob();
+
+        // TODO: compute log likelihood for convergence criterion
+        // ...
+
+        memset(c_norm, 0, K*T*sizeof(double));
+        memset(alpha, 0, K*T*N*sizeof(double));
+        memset(beta, 0, K*T*N*sizeof(double));
+        memset(ggamma, 0, K*T*N*sizeof(double));
+        memset(sigma, 0, K*T*N*N*sizeof(double));
+        memset(ggamma_sum, 0, K*N*sizeof(double));
+        memset(sigma_sum, 0, K*N*N*sizeof(double));
+    }
+
+    free(c_norm);
+    free(alpha);
+    free(beta);
+    free(ggamma);
+    free(sigma);
+    free(ggamma_sum);
+    free(sigma_sum);
+}
 
 
-void compute_baum_welch_iteration(
-    unsigned int K,
-    unsigned int N,
-    unsigned int M,
-    unsigned int T,
-    unsigned int* observations,
-    double* init_prob,
-    double* trans_prob,
-    double* emit_prob
-) {
-
+void forward_step(void) {
     for (int k = 0; k < K; k++) {
-
-        /* ------------------------------------------------------------------- */
-        /* ------------------------- Forward-Step ---------------------------- */
-        /* ------------------------------------------------------------------- */
-
         // t = 0, base case
         for (int n = 0; n < N; n++) {
             alpha[(k*T + 0)*N + n] = init_prob[n]*emit_prob[n*M + observations[k*T + 0]];
@@ -63,11 +132,12 @@ void compute_baum_welch_iteration(
                 alpha[(k*T + t)*N + n0] *= c_norm[k*T + t];
             }
         }
+    }
+}
 
-        /* ------------------------------------------------------------------- */
-        /* ------------------------ Backward-Step ---------------------------- */
-        /* ------------------------------------------------------------------- */
 
+void backward_step(void) {
+    for (int k = 0; k < K; k++) {
         // t = T, base case
         for (int n = 0; n < N; n++) {
             beta[(k*T + (T-1))*N + n] = 1.0*c_norm[k*T + (T-1)];
@@ -83,11 +153,12 @@ void compute_baum_welch_iteration(
                 beta[(k*T + t)*N + n0] = tmp_sum*c_norm[k*T + t];
             }
         }
+    }
+}
 
-        /* ------------------------------------------------------------------- */
-        /* ----------------------- Calculate Gamma --------------------------- */
-        /* ------------------------------------------------------------------- */
 
+void compute_gamma(void) {
+    for (int k = 0; k < K; k++) {
         for (int t = 0; t < T; t++) {
             for (int n = 0; n < N; n++) {
                 ggamma[(k*T + t)*N + n] = alpha[(k*T + t)*N + n] * beta[(k*T + t)*N + n] / c_norm[k*T + t];
@@ -104,11 +175,12 @@ void compute_baum_welch_iteration(
                 ggamma_sum[k*N + n] = tmp_sum;
             }
         }
+    }
+}
 
-        /* ------------------------------------------------------------------- */
-        /* ----------------------- Calculate Sigma --------------------------- */
-        /* ------------------------------------------------------------------- */
 
+void compute_sigma(void) {
+    for (int k = 0; k < K; k++) {
         for (int t = 0; t < T-1; t++) {
             for (int n0 = 0; n0 < N; n0++) {
                 for (int n1 = 0; n1 < N; n1++) {
@@ -128,13 +200,11 @@ void compute_baum_welch_iteration(
                 sigma_sum[(k*N + n0)*N + n1] = tmp_sum;
             }
         }
-
     }
+}
 
-    /* ------------------------------------------------------------------- */
-    /* ----------------- Update Initial Probabilities -------------------- */
-    /* ------------------------------------------------------------------- */
 
+void update_init_prob(void) {
     for (int n = 0; n < N; n++) {
         double tmp_sum = 0.0;
         for (int k = 0; k < K; k++) {
@@ -142,11 +212,10 @@ void compute_baum_welch_iteration(
         }
         init_prob[n] = tmp_sum/K;
     }
+}
 
-    /* ------------------------------------------------------------------- */
-    /* ---------------- Update Transition Probabilities ------------------ */
-    /* ------------------------------------------------------------------- */
 
+void update_trans_prob(void) {
     for (int n0 = 0; n0 < N; n0++) {
         for (int n1 = 0; n1 < N; n1++) {
             double numerator_sum = 0.0;
@@ -158,18 +227,16 @@ void compute_baum_welch_iteration(
             trans_prob[n0*N + n1] = numerator_sum / denominator_sum;
         }
     }
+}
 
-    /* ------------------------------------------------------------------- */
-    /* ----------------- Update Emission Probabilities ------------------- */
-    /* ------------------------------------------------------------------- */
 
+void update_emit_prob(void) {
     // add last T-step to ggamma_sum
     for (int k = 0; k < K; k++) {
         for (int n = 0; n < N; n++) {
             ggamma_sum[k*N + n] += ggamma[(k*T + (T-1))*N + n];
         }
     }
-
     // update emit_prob
     for (int m = 0; m < M; m++) {
         for (int n = 0; n < N; n++) {
@@ -188,57 +255,4 @@ void compute_baum_welch_iteration(
             emit_prob[n*M + m] = numerator_sum / denominator_sum;
         }
     }
-
-    return;
-}
-
-
-void compute_baum_welch(
-    unsigned int iterations,
-    unsigned int K,
-    unsigned int N,
-    unsigned int M,
-    unsigned int T,
-    unsigned int* observations,
-    double* init_prob,
-    double* trans_prob,
-    double* emit_prob
-    ) {
-
-    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    c_norm = (double *)calloc(K*T, sizeof(double));
-    if (c_norm == NULL) exit(1);
-    alpha = (double *)calloc(K*T*N, sizeof(double));
-    if (alpha == NULL) exit(1);
-    beta = (double *)calloc(K*T*N, sizeof(double));
-    if (beta == NULL) exit(1);
-    ggamma = (double *)calloc(K*T*N, sizeof(double));
-    if (ggamma == NULL) exit(1);
-    sigma = (double *)calloc(K*T*N*N, sizeof(double));
-    if (sigma == NULL) exit(1);
-    ggamma_sum = (double *)calloc(K*N, sizeof(double));
-    if (ggamma_sum == NULL) exit(1);
-    sigma_sum = (double *)calloc(K*N*N, sizeof(double));
-    if (sigma_sum == NULL) exit(1);
-
-    for (unsigned int i = 0; i < iterations; i++) {
-        compute_baum_welch_iteration(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
-        memset(c_norm, 0, K*T*sizeof(double));
-        memset(alpha, 0, K*T*N*sizeof(double));
-        memset(beta, 0, K*T*N*sizeof(double));
-        memset(ggamma, 0, K*T*N*sizeof(double));
-        memset(sigma, 0, K*T*N*N*sizeof(double));
-        memset(ggamma_sum, 0, K*N*sizeof(double));
-        memset(sigma_sum, 0, K*N*N*sizeof(double));
-    }
-
-    free(c_norm);
-    free(alpha);
-    free(beta);
-    free(ggamma);
-    free(sigma);
-    free(ggamma_sum);
-    free(sigma_sum);
-
-    return;
 }
