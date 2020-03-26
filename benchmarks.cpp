@@ -22,16 +22,6 @@
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
 
-unsigned int K = 1; // number of observation sequences / training datasets
-unsigned int N = 3; // number of hidden state variables
-unsigned int M = 3; // number of observations
-unsigned int T = 3; // number of time steps
-
-unsigned int* observations; //  [K][T]    [k][t]    := observation sequence k at time_step t
-double* init_prob; //           [N]       [n]       := P(X_1 = n)
-double* trans_prob; //          [N][N]    [n0][n1]  := P(X_t = n1 | X_(t-1) = n0)
-double* emit_prob; //           [N][M]    [n][m]    := P(Y_t = y_m | X_t = n)
-
 void print_states(unsigned int N, unsigned int M, unsigned int T) {
 
     printf("\n");
@@ -56,8 +46,35 @@ void print_states(unsigned int N, unsigned int M, unsigned int T) {
     printf("\n");
 }
 
+int main(int argc, char **argv) {
 
-void init() {
+    unsigned int K = 1; // number of observation sequences / training datasets
+    unsigned int N = 3; // number of hidden state variables
+    unsigned int M = 3; // number of observations
+    unsigned int T = 3; // number of time steps
+
+    if ( argc != 2 ) {
+        printf("usage: FW <max_iterations>\n");
+        return -1;
+    } unsigned int max_iterations = atoi(argv[1]);
+
+    unsigned int fp_cost = 0;
+    fp_cost += 1*T;
+    fp_cost += 1*N;
+    fp_cost += 1*N*N;
+    fp_cost += 1*N*M;
+    fp_cost += 3*T*N;
+    fp_cost += 1*T*N*N;
+
+    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
+    unsigned int* observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
+    if (observations == NULL) exit (1);
+    double* init_prob = (double *)calloc(N, sizeof(double));
+    if (init_prob == NULL) exit (1);
+    double* trans_prob = (double *)calloc(N*N, sizeof(double));
+    if (trans_prob == NULL) exit (1);
+    double* emit_prob = (double *)calloc(N*M, sizeof(double));
+    if (emit_prob == NULL) exit (1);
 
     // uniform
     for (int n0 = 0; n0 < N; n0++) {
@@ -79,12 +96,6 @@ void init() {
             observations[k*T + t] = t % 2;
         }
     }
-
-    return;
-}
-
-
-double rdtsc(unsigned int max_iterations) {
 
     int i, num_runs;
     myInt64 cycles;
@@ -114,46 +125,12 @@ double rdtsc(unsigned int max_iterations) {
         compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob);
     }
     cycles = stop_tsc(start)/num_runs;
-    return (double) cycles;
-}
-
-
-int main(int argc, char **argv) {
-
-    if ( argc != 2 ) {
-        printf("usage: FW <max_iterations>\n");
-        return -1;
-    } unsigned int max_iterations = atoi(argv[1]);
-
-    unsigned int fp_cost = 0;
-    fp_cost += 1*T;
-    fp_cost += 1*N;
-    fp_cost += 1*N*N;
-    fp_cost += 1*N*M;
-    fp_cost += 3*T*N;
-    fp_cost += 1*T*N*N;
-
-    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
-    if (observations == NULL) exit (1);
-    init_prob = (double *)calloc(N, sizeof(double));
-    if (init_prob == NULL) exit (1);
-    trans_prob = (double *)calloc(N*N, sizeof(double));
-    if (trans_prob == NULL) exit (1);
-    emit_prob = (double *)calloc(N*M, sizeof(double));
-    if (emit_prob == NULL) exit (1);
-
-    // Fill
-    init();
-
-    // compute will be executed in here
-    double r = rdtsc(max_iterations);
 
     printf("\n");
-    printf("(%d, %lf)\n", max_iterations, fp_cost / r);
-    printf("(%d, %lf)\n", N, fp_cost / r);
-    printf("(%d, %lf)\n", M, fp_cost / r);
-    printf("(%d, %lf)\n", T, fp_cost / r);
+    printf("(%d, %lf)\n", max_iterations, fp_cost / cycles);
+    printf("(%d, %lf)\n", N, fp_cost / cycles);
+    printf("(%d, %lf)\n", M, fp_cost / cycles);
+    printf("(%d, %lf)\n", T, fp_cost / cycles);
     printf("\n");
 
     print_states(N, M, T);
