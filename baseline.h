@@ -10,17 +10,17 @@
 #include <cmath>
 #include <cstring>
 
-unsigned int K;
-unsigned int N;
-unsigned int M;
-unsigned int T;
+unsigned int K;  // number of observation sequences / training datasets
+unsigned int N;  // number of hidden state variables
+unsigned int M;  // number of observations
+unsigned int T;  // number of time steps
 
 // (for each oberservation/training sequence 0 <= k < K)
 unsigned int* observations; //  [K][T]       [k][t]            := observation sequence k at time_step t
 double* init_prob; //           [N]          [n]               := P(X_1 = n)
 double* trans_prob; //          [N][N]       [n0][n1]          := P(X_t = n1 | X_(t-1) = n0)
 double* emit_prob; //           [N][M]       [n][m]            := P(Y_t = y_m | X_t = n)
-double* c_norm; //              [K][T]       [k][t]            :=  scaling factor for numerical stability
+double* c_norm; //              [K][T]       [k][t]            :=  scaling/normalization factor for numerical stability
 double* alpha; //               [K][T][N]    [k][t][n]         :=  P(Y_1 = y_1, ..., Y_t = y_t, X_t = n, theta)
 double* beta; //                [K][T][N]    [k][t][n]         :=  P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = n, theta)
 double* ggamma; //              [K][T][N]    [k][t][n]         :=  P(X_t = n | Y, theta)
@@ -85,7 +85,7 @@ void compute_baum_welch(
         update_emit_prob();
 
         // TODO: compute log likelihood for convergence criterion
-        // ...
+        //memset ...
 
         memset(c_norm, 0, K*T*sizeof(double));
         memset(alpha, 0, K*T*N*sizeof(double));
@@ -115,16 +115,18 @@ void forward_step(void) {
         } 
 
         c_norm[k*T + 0] = 1.0/c_norm[k*T + 0];
-        for (int n = 0; n < N; n++) alpha[(k*T + 0)*N + n] *= c_norm[k*T + 0];
+        for (int n = 0; n < N; n++){
+	    alpha[(k*T + 0)*N + n] *= c_norm[k*T + 0];
+	}
 
         // recursion step
         for (int t = 1; t < T; t++) {
             for (int n0 = 0; n0 < N; n0++) {
-                double tmp_sum = 0.0;
+                double alpha_temp = 0.0;
                 for (int n1 = 0; n1 < N; n1++) {
-                    tmp_sum += alpha[(k*T + (t-1))*N + n1]*trans_prob[n1*N + n0];
+                    alpha_temp += alpha[(k*T + (t-1))*N + n1]*trans_prob[n1*N + n0];
                 }
-                alpha[(k*T + t)*N + n0] = emit_prob[n0*M + observations[k*T + t]] * tmp_sum;
+                alpha[(k*T + t)*N + n0] = emit_prob[n0*M + observations[k*T + t]] * alpha_temp;
                 c_norm[k*T + t] += alpha[(k*T + t)*N + n0];
             }
             c_norm[k*T + t] = 1.0/c_norm[k*T + t];
@@ -146,11 +148,11 @@ void backward_step(void) {
         // recursion step
         for (int t = T-2; t >= 0; t--) {
             for (int n0 = 0; n0 < N; n0++) {
-                double tmp_sum = 0.0;
+                double beta_temp = 0.0;
                 for (int n1 = 0; n1 < N; n1++) {
-                    tmp_sum += beta[(k*T + (t+1))*N + n1] * trans_prob[n0*N + n1] * emit_prob[n1*M + observations[k*T + (t+1)]];
+                    beta_temp += beta[(k*T + (t+1))*N + n1] * trans_prob[n0*N + n1] * emit_prob[n1*M + observations[k*T + (t+1)]];
                 }
-                beta[(k*T + t)*N + n0] = tmp_sum*c_norm[k*T + t];
+                beta[(k*T + t)*N + n0] = beta_temp * c_norm[k*T + t];
             }
         }
     }
@@ -164,16 +166,16 @@ void compute_gamma(void) {
                 ggamma[(k*T + t)*N + n] = alpha[(k*T + t)*N + n] * beta[(k*T + t)*N + n] / c_norm[k*T + t];
             }
         }
+    }
 
-        // sum up ggamma (from t = 0 to T-2)
-        for (int k = 0; k < K; k++) {
-            for (int n = 0; n < N; n++) {
-                double tmp_sum = 0.0;
-                for (int t = 0; t < T-1; t++) {
-                    tmp_sum += ggamma[(k*T + t)*N + n];
-                }
-                ggamma_sum[k*N + n] = tmp_sum;
+    // sum up ggamma (from t = 0 to T-2; serve as normalizer for trans_prob)
+    for (int k = 0; k < K; k++) {
+        for (int n = 0; n < N; n++) {
+            double tmp_sum = 0.0;
+            for (int t = 0; t < T-1; t++) {
+                tmp_sum += ggamma[(k*T + t)*N + n];
             }
+            ggamma_sum[k*N + n] = tmp_sum;
         }
     }
 }
@@ -206,11 +208,11 @@ void compute_sigma(void) {
 
 void update_init_prob(void) {
     for (int n = 0; n < N; n++) {
-        double tmp_sum = 0.0;
+        double ggamma_sum = 0.0;
         for (int k = 0; k < K; k++) {
-            tmp_sum += ggamma[(k*T + 0)*N + n];
+            ggamma_sum += ggamma[(k*T + 0)*N + n];
         }
-        init_prob[n] = tmp_sum/K;
+        init_prob[n] = ggamma_sum/K;
     }
 }
 
@@ -238,8 +240,8 @@ void update_emit_prob(void) {
         }
     }
     // update emit_prob
-    for (int m = 0; m < M; m++) {
-        for (int n = 0; n < N; n++) {
+    for (int n = 0; n < N; n++) {
+        for (int m = 0; m < M; m++) {
             double numerator_sum = 0.0;
             double denominator_sum = 0.0;
             for (int k = 0; k < K; k++) {
