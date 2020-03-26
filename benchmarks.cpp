@@ -12,6 +12,7 @@
 
 // all versions (may overwrite each other)
 #include "baseline.h"
+//#include "baseline2.h"
 //#include "sota.h"
 //#include "scalar_optimized.h"
 //#include "vector_optimized.h"
@@ -84,13 +85,14 @@ int main(int argc, char **argv) {
         }
     }
 
+    //uniform
     for (int n = 0; n < N; n++) {
         for (int m = 0; m < M; m++) {
             emit_prob[n*M + m] = 1.0/M;
         }
     }
 
-    // fixed observationservation
+    // fixed observation (can be changed to e.g. all 1 for verification)
     for (int k = 0; k < K; k++) {
         for (int t = 0; t < T; t++) {
             observations[k*T + t] = t % 2;
