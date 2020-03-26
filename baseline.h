@@ -171,11 +171,11 @@ void compute_gamma(void) {
     // sum up ggamma (from t = 0 to T-2; serve as normalizer for trans_prob)
     for (int k = 0; k < K; k++) {
         for (int n = 0; n < N; n++) {
-            double tmp_sum = 0.0;
+            double g_sum = 0.0;
             for (int t = 0; t < T-1; t++) {
-                tmp_sum += ggamma[(k*T + t)*N + n];
+                g_sum += ggamma[(k*T + t)*N + n];
             }
-            ggamma_sum[k*N + n] = tmp_sum;
+            ggamma_sum[k*N + n] = g_sum;
         }
     }
 }
@@ -195,11 +195,11 @@ void compute_sigma(void) {
         // sum up sigma (from t = 0 to T-1)
         for (int n0 = 0; n0 < N; n0++) {
             for (int n1 = 0; n1 < N; n1++) {
-                double tmp_sum = 0.0;
+                double s_sum = 0.0;
                 for (int t = 0; t < T-1; t++) {
-                    tmp_sum += sigma[((k*T + t)*N + n0)*N + n1];
+                    s_sum += sigma[((k*T + t)*N + n0)*N + n1];
                 }
-                sigma_sum[(k*N + n0)*N + n1] = tmp_sum;
+                sigma_sum[(k*N + n0)*N + n1] = s_sum;
             }
         }
     }
@@ -208,11 +208,11 @@ void compute_sigma(void) {
 
 void update_init_prob(void) {
     for (int n = 0; n < N; n++) {
-        double ggamma_sum = 0.0;
+        double g0_sum = 0.0;
         for (int k = 0; k < K; k++) {
-            ggamma_sum += ggamma[(k*T + 0)*N + n];
+            g0_sum += ggamma[(k*T + 0)*N + n];
         }
-        init_prob[n] = ggamma_sum/K;
+        init_prob[n] = g0_sum/K;
     }
 }
 
