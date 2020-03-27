@@ -1,20 +1,37 @@
-# ASL_Baum_Welch_Algorithm
+# Spring 2020
+# Advanced Systems Lab (How to Write Fast Numerical Code)
+# Semester Project: Baum-Welch algorithm
 
-ASL Project
+# Authors
+# Josua Cantieni, Franz Knobel, Cheuk Yu Chan, Ramon Witschi
+# ETH Computer Science MSc, Computer Science Department ETH Zurich
 
-Implementations of Baum-Welch algorithm. Using various optimizations.
 
-
-## How to compile
+## How to compile Benchmarks
 Go to top level directory, do
 ```
-gcc -03 -o benchmarks benchmarks.cpp
+gcc -03 -o benchmarks benchmarks.cpp -lm
 ```
 Additional flags should be added.
 
 
-## How to run
+## How to run Benchmarks
 ```
 ./benchmarks 100
 ```
 The maximal number of iterations (here 100) can be ajust.
+
+
+## How to compile Verifications
+Go to top level directory, do
+```
+gcc -O3 -o verifications verifications.cpp -lm
+```
+Additional flags should be added.
+
+
+## How to run Verifications
+```
+./verifications
+```
+The test cases are hard coded to check the implementations.
