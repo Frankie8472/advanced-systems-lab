@@ -1,15 +1,12 @@
 
-**Spring 2020**
+# Advanced Systems Lab (How to Write Fast Numerical Code) - Spring 2020
+Semester Project: Baum-Welch algorithm
 
-**Advanced Systems Lab (How to Write Fast Numerical Code)**
+### Authors
 
-**Semester Project: Baum-Welch algorithm**
+Josua Cantieni, Franz Knobel, Cheuk Yu Chan, Ramon Witschi
 
-**Authors**
-
-**Josua Cantieni, Franz Knobel, Cheuk Yu Chan, Ramon Witschi**
-
-**ETH Computer Science MSc, Computer Science Department ETH Zurich**
+ETH Computer Science MSc, Computer Science Department ETH Zurich
 
 
 ## How to compile Benchmarks
