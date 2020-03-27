@@ -33,8 +33,6 @@ Go to top level directory, do
 ```
 gcc -O3 -o verifications verifications.cpp -lm
 ```
-Additional flags should be added.
-
 
 ## How to run Verifications
 ```
