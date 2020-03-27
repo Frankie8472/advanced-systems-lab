@@ -1,15 +1,26 @@
+/*
+    Benchmarks for the various Baum Welch algorithm implementations
+    Structure code such that it produces output results we can copy-paste into latex plots (minimize overhead)
 
-// Structure code such that it produces output results we can copy-paste into latex plots (minimize overhead)
+    -----------------------------------------------------------------------------------
 
-#ifndef WIN32
-    #include <sys/time.h>
-#endif
+    Spring 2020
+    Advanced Systems Lab (How to Write Fast Numerical Code)
+    Semester Project: Baum-Welch algorithm
+
+    Authors
+    Josua Cantieni, Franz Knobel, Cheuk Yu Chan, Ramon Witschi
+    ETH Computer Science MSc, Computer Science Department ETH Zurich
+
+    -----------------------------------------------------------------------------------
+*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-
+// custom files for the project
 #include "tsc_x86.h"
-
+#include "helper_utilities.h"
 // all versions (may overwrite each other)
 #include "baseline.h"
 //#include "sota.h"
@@ -77,27 +88,9 @@ int main(int argc, char **argv) {
     double* emit_prob = (double *)calloc(N*M, sizeof(double));
     if (emit_prob == NULL) exit (1);
 
-    // uniform
-    for (int n0 = 0; n0 < N; n0++) {
-        init_prob[n0] = 1.0/N;
-        for (int n1 = 0; n1 < N; n1++) {
-            trans_prob[n0*N + n1] = 1.0/N;
-        }
-    }
+    double neg_log_likelihoods[max_iterations];
 
-    //uniform
-    for (int n = 0; n < N; n++) {
-        for (int m = 0; m < M; m++) {
-            emit_prob[n*M + m] = 1.0/M;
-        }
-    }
-
-    // fixed observation (can be changed to e.g. all 1 for verification)
-    for (int k = 0; k < K; k++) {
-        for (int t = 0; t < T; t++) {
-            observations[k*T + t] = t % 2;
-        }
-    }
+    initialize_uar(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
 
     int i, num_runs;
     myInt64 cycles;
@@ -115,7 +108,7 @@ int main(int argc, char **argv) {
     while (num_runs < (1 << 14)) {
         start = start_tsc();
         for (i = 0; i < num_runs; ++i) {
-            compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob);
+            compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
         }
         cycles = stop_tsc(start);
         if ( cycles >= CYCLES_REQUIRED ) break;
@@ -124,7 +117,7 @@ int main(int argc, char **argv) {
 #endif
     start = start_tsc();
     for (i = 0; i < num_runs; ++i) {
-        compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob);
+        compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
     }
     cycles = stop_tsc(start)/num_runs;
 

@@ -1,10 +1,32 @@
 /*
-    (should be correct; but still needs more verification!)
-
     Baseline implementation
-    Make sure you understand it!
-    Everything taken from here : 
+
+    -----------------------------------------------------------------------------------
+
+    Spring 2020
+    Advanced Systems Lab (How to Write Fast Numerical Code)
+    Semester Project: Baum-Welch algorithm
+
+    Authors
+    Josua Cantieni, Franz Knobel, Cheuk Yu Chan, Ramon Witschi
+    ETH Computer Science MSc, Computer Science Department ETH Zurich
+
+    -----------------------------------------------------------------------------------
+
+    Make sure you understand it! Refer to
     https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/tutorial.pdf
+
+    Assumptions: K can be 1 or more
+    N, M and T must be divisible by 4
+
+    Verified by checking monotonously decreasing
+    sequence of negative log likelihoods and whether
+    the rows of init_prob, trans_prob and emit_prob
+    sum to 1.0, with large K, N, M and T and u.a.r.
+    observations, init_prob, trans_prob and emit_prob
+
+    Code checked against Matlab implementation of
+    https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/
 */
 
 #include <cmath>
@@ -50,7 +72,8 @@ void compute_baum_welch(
     unsigned int* observations,
     double* init_prob,
     double* trans_prob,
-    double* emit_prob
+    double* emit_prob,
+    double neg_log_likelihoods[]
     ) {
 
     const BWdata& bw = {
@@ -62,12 +85,19 @@ void compute_baum_welch(
         init_prob,
         trans_prob,
         emit_prob,
+        // c_norm
         (double *)calloc(K*T, sizeof(double)),
+        // alpha
         (double *)calloc(K*T*N, sizeof(double)),
+        // beta
         (double *)calloc(K*T*N, sizeof(double)),
+        // ggamma
         (double *)calloc(K*T*N, sizeof(double)),
+        // sigma
         (double *)calloc(K*T*N*N, sizeof(double)),
+        // ggamma_sum
         (double *)calloc(K*N, sizeof(double)),
+        // sigma_sum
         (double *)calloc(K*N*N, sizeof(double))
     };
 
@@ -89,9 +119,22 @@ void compute_baum_welch(
         update_trans_prob(bw);
         update_emit_prob(bw);
 
-        // TODO: compute log likelihood for convergence criterion
+        // negative log likelihood for convergence criterion
+        // (we don't care about the actual convergence criterion)
+        // (since we want a fixed number of iterations for benchmarking purposes)
+        // (however, the negative log likelihood is used for verification purposes)
+        // (in each iteration, the new negative log likelihood should be)
+        // (less than or equal to the old negative log likelihood)
+        // (=> guaranteed to find a (local) minima)
+        double neg_log_likelihood_sum = 0.0;
+        for (int k = 0; k < bw.K; k++) {
+            for (int t = 0; t < bw.T; t++) {
+                neg_log_likelihood_sum = neg_log_likelihood_sum - log(bw.c_norm[k*T + t]);
+            }
+        }
+        neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
-        // reinitializes to 0.0 for the next iteration
+        // reinitialization to 0.0 for the next iteration
         memset(bw.c_norm, 0, bw.K*bw.T*sizeof(double));
         memset(bw.alpha, 0, bw.K*bw.T*bw.N*sizeof(double));
         memset(bw.beta, 0, bw.K*bw.T*bw.N*sizeof(double));
