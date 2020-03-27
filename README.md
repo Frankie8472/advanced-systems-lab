@@ -8,6 +8,10 @@ Josua Cantieni, Franz Knobel, Cheuk Yu Chan, Ramon Witschi
 
 ETH Computer Science MSc, Computer Science Department ETH Zurich
 
+## Goal
+
+Starting with a Baseline version, we implement various optimizations to significantly speed up the performance of the Baum-Welch algorithm.
+
 
 ## How to compile Benchmarks
 Go to top level directory, do
