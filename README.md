@@ -10,7 +10,7 @@ ETH Computer Science MSc, Computer Science Department ETH Zurich
 
 ## Goal
 
-Starting with a Baseline version, we implement various optimizations to significantly speed up the performance of the Baum-Welch algorithm.
+Starting with a baseline version, we implement various optimizations to significantly speed up the performance of the Baum-Welch algorithm.
 
 
 ## How to compile Benchmarks
