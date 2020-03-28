@@ -133,13 +133,12 @@ void initialize_random(
 
 void check_and_verify(
     const unsigned int max_iterations,
-    const unsigned int K,
     const unsigned int N,
     const unsigned int M,
     double* const init_prob,
     double* const trans_prob,
     double* const emit_prob,
-    double neg_log_likelihoods[]
+    double* const neg_log_likelihoods
 ) {
 
     unsigned int errors;
@@ -173,7 +172,7 @@ void check_and_verify(
     for (int n = 0; n < N; n++) {
         emit_sum = 0.0;
         for (int m = 0; m < M; m++) {
-            emit_sum += emit_prob[n*N + m];
+            emit_sum += emit_prob[n*M + m];
         }
         if ( ! ( 1.0 - 1e-12 < emit_sum && emit_sum < 1.0 + 1e-12 ) ) { 
             errors++;
@@ -183,7 +182,7 @@ void check_and_verify(
     if (errors > 0) printf("\n%d VIOLATIONS of rows in emit_prob that do not sum to 1.0\n", errors);
     else printf("\nPASSED: emit_prob rows sum to 1.0");
 
-    // check if the negative log likelihood sequence decreases monotonically
+    // check the negative log likelihood sequence for monotonicity
     errors = 0;
     for (int iterations = 1; iterations < max_iterations; iterations++) {
         double old_nll = neg_log_likelihoods[iterations-1];

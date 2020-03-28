@@ -39,10 +39,10 @@ int main(int argc, char **argv) {
     // randomize seed
     srand(time(NULL));
 
-    const unsigned int K = 1; // number of observation sequences / training datasets
-    const unsigned int N = 3; // number of hidden state variables
-    const unsigned int M = 3; // number of observations
-    const unsigned int T = 3; // number of time steps
+    const unsigned int K = 4; // number of observation sequences / training datasets
+    const unsigned int N = 4; // number of hidden state variables
+    const unsigned int M = 4; // number of observations
+    const unsigned int T = 4; // number of time steps
     if ( argc != 2 ) {
         printf("usage: FW <max_iterations>\n");
         return -1;
@@ -101,13 +101,14 @@ int main(int argc, char **argv) {
     cycles = stop_tsc(start)/num_runs;
 
     printf("\n");
-    printf("(%d, %lf)\n", max_iterations, fp_cost / cycles);
-    printf("(%d, %lf)\n", N, fp_cost / cycles);
-    printf("(%d, %lf)\n", M, fp_cost / cycles);
-    printf("(%d, %lf)\n", T, fp_cost / cycles);
+    printf("(%d, %f)\n", max_iterations, fp_cost / (double) cycles);
+    printf("(%d, %f)\n", N, fp_cost / (double) cycles);
+    printf("(%d, %f)\n", M, fp_cost / (double) cycles);
+    printf("(%d, %f)\n", T, fp_cost / (double) cycles);
     printf("\n");
 
-    print_states(N, M, T, init_prob, trans_prob, emit_prob);
+    //check_and_verify(max_iterations, N, M, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+    //print_states(N, M, T, init_prob, trans_prob, emit_prob);
 
     free(observations);
     free(init_prob);

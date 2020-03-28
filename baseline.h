@@ -17,16 +17,20 @@
     https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/tutorial.pdf
 
     Assumptions
-    K >= 1
-    N >= 2 and divisible by 4
-    M >= 2 and divisible by 4
-    T >= 2 and divisible by 4
+    K >= 4 and divisible by 4
+    N >= 4 and divisible by 4
+    M >= 4 and divisible by 4
+    T >= 4 and divisible by 4
 
     Verified by checking monotonously decreasing
     sequence of negative log likelihoods and whether
     the rows of init_prob, trans_prob and emit_prob
     sum to 1.0, with large K, N, M and T and u.a.r.
     observations, init_prob, trans_prob and emit_prob
+
+    Note that if K = 1 and the initialization of the observational data
+    is unlucky, the probabilities could degenerate to NaNs, which is fine.
+    For simplicity, we assume divisibility by 4, which solves this problem anyway.
 
     Code checked against Matlab implementation of
     https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/
@@ -79,6 +83,23 @@ void compute_baum_welch(
     double* const neg_log_likelihoods
     ) {
 
+    if (K < 4 || K % 4 != 0) {
+        printf("\nVIOLATION: K is %d, but must be >= 4 and divisible by 4", K);
+        exit(1);
+    }
+    if (N < 4 || N % 4 != 0) {
+        printf("\nVIOLATION: N is %d, but must be >= 4 and divisible by 4", N);
+        exit(1);
+    }
+    if (M < 4 || M % 4 != 0) {
+        printf("\nVIOLATION: M is %d, but must be >= 4 and divisible by 4", M);
+        exit(1);
+    }
+    if (T < 4 || T % 4 != 0) {
+        printf("\nVIOLATION: T is %d, but must be >= 4 and divisible by 4", T);
+        exit(1);
+    }
+
     const BWdata& bw = {
         K,
         N,
@@ -89,40 +110,20 @@ void compute_baum_welch(
         trans_prob,
         emit_prob,
         // c_norm
-        (double * const)calloc(K*T, sizeof(double)),
+        (double *)calloc(K*T, sizeof(double)),
         // alpha
-        (double * const)calloc(K*T*N, sizeof(double)),
+        (double *)calloc(K*T*N, sizeof(double)),
         // beta
-        (double * const)calloc(K*T*N, sizeof(double)),
+        (double *)calloc(K*T*N, sizeof(double)),
         // ggamma
-        (double * const)calloc(K*T*N, sizeof(double)),
+        (double *)calloc(K*T*N, sizeof(double)),
         // sigma
-        (double * const)calloc(K*T*N*N, sizeof(double)),
+        (double *)calloc(K*T*N*N, sizeof(double)),
         // ggamma_sum
-        (double * const)calloc(K*N, sizeof(double)),
+        (double *)calloc(K*N, sizeof(double)),
         // sigma_sum
-        (double * const)calloc(K*N*N, sizeof(double))
+        (double *)calloc(K*N*N, sizeof(double))
     };
-
-    if (K == 0) {
-        printf("\nVIOLATION: K is %d, but must be bigger than 0", K);
-        exit(1);
-    }
-
-    if (N == 0 || N % 1 != 0) {
-        printf("\nVIOLATION: N is %d, but must be bigger than 0 and divisible by 4", K);
-        exit(1);
-    }
-
-    if (M == 0 || M % 1 != 0) {
-        printf("\nVIOLATION: M is %d, but must be bigger than 0 and divisible by 4", K);
-        exit(1);
-    }
-
-    if (T < 2 || T % 1 != 0) {
-        printf("\nVIOLATION: T is %d, but must be bigger than 1 and divisible by 4", K);
-        exit(1);
-    }
 
     if (bw.c_norm == NULL) exit(1);
     if (bw.alpha == NULL) exit(1);
@@ -142,13 +143,6 @@ void compute_baum_welch(
         update_trans_prob(bw);
         update_emit_prob(bw);
 
-        // negative log likelihood for convergence criterion
-        // (we don't care about the actual convergence criterion)
-        // (since we want a fixed number of iterations for benchmarking purposes)
-        // (however, the negative log likelihood is used for verification purposes)
-        // (in each iteration, the new negative log likelihood should be)
-        // (less than or equal to the old negative log likelihood)
-        // (=> guaranteed to find a (local) minima)
         double neg_log_likelihood_sum = 0.0;
         for (int k = 0; k < bw.K; k++) {
             for (int t = 0; t < bw.T; t++) {
@@ -156,6 +150,10 @@ void compute_baum_welch(
             }
         }
         neg_log_likelihoods[i] = neg_log_likelihood_sum;
+
+        // convergence criterion
+        if (i > 0 && abs(neg_log_likelihoods[i] - neg_log_likelihoods[i-1]) < 1e-3) break;
+
 
         // reinitialization to 0.0 for the next iteration
         memset(bw.c_norm, 0, bw.K*bw.T*sizeof(double));
@@ -165,6 +163,8 @@ void compute_baum_welch(
         memset(bw.sigma, 0, bw.K*bw.T*bw.N*bw.N*sizeof(double));
         memset(bw.gamma_sum, 0, bw.K*bw.N*sizeof(double));
         memset(bw.sigma_sum, 0, bw.K*bw.N*bw.N*sizeof(double));
+
+        //print_states(N, M, T, init_prob, trans_prob, emit_prob);
     }
 
     free(bw.c_norm);
