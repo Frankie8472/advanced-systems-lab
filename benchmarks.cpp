@@ -33,42 +33,21 @@
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
 
-void print_states(unsigned int N, unsigned int M, unsigned int T,
-    double* init_prob, double* trans_prob, double* emit_prob) {
-
-    printf("\n");
-    printf("\nInitialization probabilities:\n");
-    for(int n = 0; n < N; n++) {
-        printf("Pr[X_1 = %d] = %f\n", n+1, init_prob[n]);
-    }
-
-    printf("\nTransition probabilities:\n");
-    for(int n0 = 0; n0 < N; n0++) {
-        for(int n1 = 0; n1 < N; n1++) {
-            printf("Pr[X_t = %d | X_(t-1) = %d ] = %f\n", n1+1, n0+1, trans_prob[n0*N + n1]);
-        }
-    }
-
-    printf("\nEmission probabilities:\n");
-    for(int n = 0; n < N; n++) {
-        for(int m = 0; m < M; m++) {
-            printf("Pr[Y_t = %d | X_t = %d] = %f\n", m+1, n+1, emit_prob[n*M + m]);
-        }
-    }
-    printf("\n");
-}
 
 int main(int argc, char **argv) {
 
-    unsigned int K = 1; // number of observation sequences / training datasets
-    unsigned int N = 3; // number of hidden state variables
-    unsigned int M = 3; // number of observations
-    unsigned int T = 3; // number of time steps
+    // randomize seed
+    srand(time(NULL));
 
+    const unsigned int K = 1; // number of observation sequences / training datasets
+    const unsigned int N = 3; // number of hidden state variables
+    const unsigned int M = 3; // number of observations
+    const unsigned int T = 3; // number of time steps
     if ( argc != 2 ) {
         printf("usage: FW <max_iterations>\n");
         return -1;
-    } unsigned int max_iterations = atoi(argv[1]);
+    }
+    const unsigned int max_iterations = atoi(argv[1]);
 
     unsigned int fp_cost = 0;
     fp_cost += 1*T;
@@ -79,16 +58,16 @@ int main(int argc, char **argv) {
     fp_cost += 1*T*N*N;
 
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    unsigned int* observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
-    if (observations == NULL) exit (1);
-    double* init_prob = (double *)calloc(N, sizeof(double));
-    if (init_prob == NULL) exit (1);
-    double* trans_prob = (double *)calloc(N*N, sizeof(double));
-    if (trans_prob == NULL) exit (1);
-    double* emit_prob = (double *)calloc(N*M, sizeof(double));
-    if (emit_prob == NULL) exit (1);
-
-    double neg_log_likelihoods[max_iterations];
+    unsigned int* const observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
+    if (observations == NULL) exit(1);
+    double* const init_prob = (double *)calloc(N, sizeof(double));
+    if (init_prob == NULL) exit(1);
+    double* const trans_prob = (double *)calloc(N*N, sizeof(double));
+    if (trans_prob == NULL) exit(1);
+    double* const emit_prob = (double *)calloc(N*M, sizeof(double));
+    if (emit_prob == NULL) exit(1);
+    double* const neg_log_likelihoods = (double *)calloc(max_iterations, sizeof(double));
+    if (neg_log_likelihoods == NULL) exit(1);
 
     initialize_uar(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
 
@@ -134,4 +113,5 @@ int main(int argc, char **argv) {
     free(init_prob);
     free(trans_prob);
     free(emit_prob);
+    free(neg_log_likelihoods);
 }

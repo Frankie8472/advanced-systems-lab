@@ -21,14 +21,14 @@
 
 
 void initialize_uar(
-    unsigned int K,
-    unsigned int N,
-    unsigned int M,
-    unsigned int T,
-    unsigned int* observations,
-    double* init_prob,
-    double* trans_prob,
-    double* emit_prob
+    const unsigned int K,
+    const unsigned int N,
+    const unsigned int M,
+    const unsigned int T,
+    unsigned int* const observations,
+    double* const init_prob,
+    double* const trans_prob,
+    double* const emit_prob
 ) {
 
     // uniform at random set init_prob and trans_prob
@@ -57,14 +57,14 @@ void initialize_uar(
 
 
 void initialize_random(
-    unsigned int K,
-    unsigned int N,
-    unsigned int M,
-    unsigned int T,
-    unsigned int* observations,
-    double* init_prob,
-    double* trans_prob,
-    double* emit_prob
+    const unsigned int K,
+    const unsigned int N,
+    const unsigned int M,
+    const unsigned int T,
+    unsigned int* const observations,
+    double* const init_prob,
+    double* const trans_prob,
+    double* const emit_prob
 ) {
 
     double init_sum;
@@ -123,21 +123,22 @@ void initialize_random(
     // fixed observation (can be changed to e.g. all 1 for verification)
     for (int k = 0; k < K; k++) {
         for (int t = 0; t < T; t++) {
-            observations[k*T + t] = rand() % T;
+            // % T would be wrong, because the observations sequence (over time 0 <= t < T)
+            // represents observations (categorical random variable) in 0 <= m < M
+            observations[k*T + t] = rand() % M;
         }
     }
 }
 
 
 void check_and_verify(
-    unsigned int max_iterations,
-    unsigned int K,
-    unsigned int N,
-    unsigned int M,
-    unsigned int T,
-    double* init_prob,
-    double* trans_prob,
-    double* emit_prob,
+    const unsigned int max_iterations,
+    const unsigned int K,
+    const unsigned int N,
+    const unsigned int M,
+    double* const init_prob,
+    double* const trans_prob,
+    double* const emit_prob,
     double neg_log_likelihoods[]
 ) {
 
@@ -197,8 +198,14 @@ void check_and_verify(
 }
 
 
-void print_states(unsigned int N, unsigned int M, unsigned int T,
-    double* init_prob, double* trans_prob, double* emit_prob) {
+void print_states(
+    const unsigned int N,
+    const unsigned int M,
+    const unsigned int T,
+    double* const init_prob,
+    double* const trans_prob,
+    double* const emit_prob
+    ) {
 
     printf("\nInitialization probabilities:\n");
     for(int n = 0; n < N; n++) {

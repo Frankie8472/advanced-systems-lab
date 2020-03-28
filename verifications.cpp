@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <random>
+#include <time.h>
+#include <unistd.h>
 // custom files for the project
 #include "helper_utilities.h"
 // all versions
@@ -30,114 +32,86 @@
 //#include "combined_optimized.h"
 
 
+void test_case_1(void);
+void test_case_2(void);
+void test_case_randomized(void);
+
+int main(int argc, char **argv) {
+
+    // randomize seed
+    unsigned int tn = time(NULL);
+
+    printf("\nTest Case 1 with srand(%d)\n", tn);
+    test_case_1();
+
+    unsigned int iters = 0;
+    for (int i = 0; i < iters; i++) {
+        tn = time(NULL);
+        srand(tn);
+        printf("\nTest Case %d with srand(%d)\n", i, tn);
+        test_case_randomized();
+        sleep(5);
+    }
+
+    //printf("\nTest Case 2 with srand(%d)\n", tn);
+    //test_case_2();
+    printf("\nAll Tests Done!\n\n");
+}
+
+
 void test_case_1(void) {
 
-    unsigned int K = 4;
-    unsigned int N = 4;
-    unsigned int M = 4;
-    unsigned int T = 4;
-    unsigned int max_iterations = 10000;
-    double neg_log_likelihoods[max_iterations];
+    const unsigned int K = 1;
+    const unsigned int N = 3;
+    const unsigned int M = 3;
+    const unsigned int T = 2;
+    const unsigned int max_iterations = 100;
+
+    printf("\nK: %d\tN: %d\tM: %d\tT: %d\tmax_iterations: %d", K, N, M, T, max_iterations);
 
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    unsigned int* observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
+    unsigned int* const observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
     if (observations == NULL) exit(1);
-    double* init_prob = (double *)calloc(N, sizeof(double));
+    double* const init_prob = (double *)calloc(N, sizeof(double));
     if (init_prob == NULL) exit(1);
-    double* trans_prob = (double *)calloc(N*N, sizeof(double));
+    double* const trans_prob = (double *)calloc(N*N, sizeof(double));
     if (trans_prob == NULL) exit(1);
-    double* emit_prob = (double *)calloc(N*M, sizeof(double));
+    double* const emit_prob = (double *)calloc(N*M, sizeof(double));
     if (emit_prob == NULL) exit(1);
+    double* const neg_log_likelihoods = (double *)calloc(max_iterations, sizeof(double));
+    if (neg_log_likelihoods == NULL) exit(1);
 
     initialize_random(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
     compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
-    check_and_verify(max_iterations, K, N, M, T, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+    check_and_verify(max_iterations, K, N, M, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
 
     free(observations);
     free(init_prob);
     free(trans_prob);
     free(emit_prob);
+    free(neg_log_likelihoods);
 }
 
 
 void test_case_2(void) {
 
-    unsigned int K = 8;
-    unsigned int N = 4;
-    unsigned int M = 16;
-    unsigned int T = 32;
-    unsigned int max_iterations = 100;
-    double neg_log_likelihoods[max_iterations];
+    const unsigned int K = 4;
+    const unsigned int N = 4;
+    const unsigned int M = 4;
+    const unsigned int T = 32;
+    const unsigned int max_iterations = 1000;
 
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    unsigned int* observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
+    unsigned int* const observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
     if (observations == NULL) exit(1);
-    double* init_prob = (double *)calloc(N, sizeof(double));
+    double* const init_prob = (double *)calloc(N, sizeof(double));
     if (init_prob == NULL) exit(1);
-    double* trans_prob = (double *)calloc(N*N, sizeof(double));
+    double* const trans_prob = (double *)calloc(N*N, sizeof(double));
     if (trans_prob == NULL) exit(1);
-    double* emit_prob = (double *)calloc(N*M, sizeof(double));
+    double* const emit_prob = (double *)calloc(N*M, sizeof(double));
     if (emit_prob == NULL) exit(1);
-
-    initialize_random(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
-    compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
-    check_and_verify(max_iterations, K, N, M, T, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
-
-    free(observations);
-    free(init_prob);
-    free(trans_prob);
-    free(emit_prob);
-}
-
-
-void test_case_3(void) {
-
-    unsigned int K = 16;
-    unsigned int N = 64;
-    unsigned int M = 32;
-    unsigned int T = 32;
-    unsigned int max_iterations = 100;
-    double neg_log_likelihoods[max_iterations];
-
-    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    unsigned int* observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
-    if (observations == NULL) exit(1);
-    double* init_prob = (double *)calloc(N, sizeof(double));
-    if (init_prob == NULL) exit(1);
-    double* trans_prob = (double *)calloc(N*N, sizeof(double));
-    if (trans_prob == NULL) exit(1);
-    double* emit_prob = (double *)calloc(N*M, sizeof(double));
-    if (emit_prob == NULL) exit(1);
-
-    initialize_random(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
-    compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
-    check_and_verify(max_iterations, K, N, M, T, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
-
-    free(observations);
-    free(init_prob);
-    free(trans_prob);
-    free(emit_prob);
-}
-
-
-void test_case_4(void) {
-
-    unsigned int K = 4;
-    unsigned int N = 4;
-    unsigned int M = 4;
-    unsigned int T = 32;
-    unsigned int max_iterations = 1000;
-    double neg_log_likelihoods[max_iterations];
-
-    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    unsigned int* observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
-    if (observations == NULL) exit(1);
-    double* init_prob = (double *)calloc(N, sizeof(double));
-    if (init_prob == NULL) exit(1);
-    double* trans_prob = (double *)calloc(N*N, sizeof(double));
-    if (trans_prob == NULL) exit(1);
-    double* emit_prob = (double *)calloc(N*M, sizeof(double));
-    if (emit_prob == NULL) exit(1);
+    double* const neg_log_likelihoods = (double *)calloc(max_iterations, sizeof(double));
+    if (neg_log_likelihoods == NULL) exit(1);
 
     observations[0*T + 5] = 1;
     observations[0*T + 6] = 1;
@@ -170,25 +144,46 @@ void test_case_4(void) {
     emit_prob[3*M + 1] = 0.2;
 
     compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
-    check_and_verify(max_iterations, K, N, M, T, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+    check_and_verify(max_iterations, K, N, M, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
     print_states(N, M, T, init_prob, trans_prob, emit_prob);
 
     free(observations);
     free(init_prob);
     free(trans_prob);
     free(emit_prob);
+    free(neg_log_likelihoods);
 }
 
 
-int main(int argc, char **argv) {
-    srand(42);
-    printf("\nTest Case 1\n");
-    test_case_1();
-    printf("\nTest Case 2\n");
-    test_case_2();
-    printf("\nTest Case 3\n");
-    test_case_3();
-    printf("\nTest Case 4\n");
-    test_case_4();
-    printf("All Tests Done!\n\n");
+void test_case_randomized(void) {
+
+    const unsigned int K = (rand() % 16) + 1;
+    const unsigned int N = 4;
+    const unsigned int M = 4;
+    const unsigned int T = (rand() % 16) + 1;
+    const unsigned int max_iterations = (rand() % 100) + 1;
+
+    printf("\nK: %d\tN: %d\tM: %d\tT: %d\tmax_iterations: %d\n", K, N, M, T, max_iterations);
+
+    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
+    unsigned int* const observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
+    if (observations == NULL) exit(1);
+    double* const init_prob = (double *)calloc(N, sizeof(double));
+    if (init_prob == NULL) exit(1);
+    double* const trans_prob = (double *)calloc(N*N, sizeof(double));
+    if (trans_prob == NULL) exit(1);
+    double* const emit_prob = (double *)calloc(N*M, sizeof(double));
+    if (emit_prob == NULL) exit(1);
+    double* const neg_log_likelihoods = (double *)calloc(max_iterations, sizeof(double));
+    if (neg_log_likelihoods == NULL) exit(1);
+
+    initialize_random(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
+    compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+    check_and_verify(max_iterations, K, N, M, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+
+    free(observations);
+    free(init_prob);
+    free(trans_prob);
+    free(emit_prob);
+    free(neg_log_likelihoods);
 }
