@@ -32,7 +32,25 @@
 #define CYCLES_REQUIRED 1e8
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
+#define REP 50
 
+
+/*
+Cost analysis (add, mul and div is one flop)
+
+forward: (1 add + 1 mul)*K*N²*T + (1 add + 2 mults)*K*N*T + (1 add + 2 mults)*K*N + (1 div)*K*T + (1 div)*K
+backward: (1 add + 2 muls)*K*N²*(T-1) + (1 mult)*K*N*(T-1) + (1 mul)*K*N
+compute gamma: (1 add + 1 mult)*K*N*T + (1 add)*K*N*(T-1)
+compute sigma: (1 add + 3 mults)*K*N²*(T-1)
+update init: (1 add)*K*N + (1 div)*N
+update trans: (2 adds)*K*N² + (1 div)*N²
+update emit: (2 adds)*N*M*T + (1 add)*K*N*T + (1 add)*K*N + (1 div)*N*M
+
+total: (1 add + 1 mul)*K*N²*T + (2 add + 5 muls)*K*N²*(T-1) + (2 adds)*K*N² + (1 div)*N² + (3 add + 3 mults)*K*N*T + (1 add + 1 muls)*K*N*(T-1)
+    + (3 add + 3 mults)*K*N + (1 div)*K + (2 adds)*N*M*T + (1 add)*K*N*T + (1 div)*K*T + (1 div)*N + (1 div)*N*M
+*/
+
+int flops;
 
 int main(int argc, char **argv) {
 
@@ -49,6 +67,9 @@ int main(int argc, char **argv) {
     }
     const unsigned int max_iterations = atoi(argv[1]);
 
+    flops = max_iterations*(2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 6*K*N + K + 2*N*M*T + K*N*T + K*T + N + N*M);
+
+    /*
     unsigned int fp_cost = 0;
     fp_cost += 1*T;
     fp_cost += 1*N;
@@ -56,6 +77,7 @@ int main(int argc, char **argv) {
     fp_cost += 1*N*M;
     fp_cost += 3*T*N;
     fp_cost += 1*T*N*N;
+    */
 
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
     unsigned int* const observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
@@ -71,41 +93,61 @@ int main(int argc, char **argv) {
 
     initialize_uar(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
 
-    int i, num_runs;
-    myInt64 cycles;
-    myInt64 start;
-    num_runs = NUM_RUNS;
 
-    /*
-     * The CPUID instruction serializes the pipeline.
-     * Using it, we can create execution barriers around the code we want to time.
-     * The calibrate section is used to make the computation large enough so as to
-     * avoid measurements bias due to the timing overhead.
-     */
+    double cycles = 0.;
+    long num_runs = 100;
+    double multiplier = 1;
+    double perf;
+    myInt64 start, end;
 
 #ifdef CALIBRATE
-    while (num_runs < (1 << 14)) {
+    // Warm-up phase: we determine a number of executions that allows
+    // the code to be executed for at least CYCLES_REQUIRED cycles.
+    // This helps excluding timing overhead when measuring small runtimes.
+    do {
+        num_runs = num_runs * multiplier;
         start = start_tsc();
-        for (i = 0; i < num_runs; ++i) {
+        for (size_t i = 0; i < num_runs; i++) {
             compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
         }
-        cycles = stop_tsc(start);
-        if ( cycles >= CYCLES_REQUIRED ) break;
-        num_runs *= 2;
-    }
-#endif
-    start = start_tsc();
-    for (i = 0; i < num_runs; ++i) {
-        compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
-    }
-    cycles = stop_tsc(start)/num_runs;
+        end = stop_tsc(start);
 
+        cycles = (double)end;
+        multiplier = (CYCLES_REQUIRED) / (cycles);
+
+    } while (multiplier > 2);
+#endif
+
+    // Actual performance measurements repeated REP times.
+    double total_cycles = 0;
+    for (size_t j = 0; j < REP; j++) {
+
+        start = start_tsc();
+        for (size_t i = 0; i < num_runs; ++i) {
+            compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+        }
+        end = stop_tsc(start);
+
+        cycles = ((double)end) / num_runs;
+        total_cycles += cycles;
+
+    }
+    total_cycles /= REP;
+
+
+    cycles = total_cycles;
+    perf =  round((100.0 * flops) / cycles) / 100.0;
+
+    printf("Performance: %f\n", perf);
+
+    /*
     printf("\n");
     printf("(%d, %f)\n", max_iterations, fp_cost / (double) cycles);
     printf("(%d, %f)\n", N, fp_cost / (double) cycles);
     printf("(%d, %f)\n", M, fp_cost / (double) cycles);
     printf("(%d, %f)\n", T, fp_cost / (double) cycles);
     printf("\n");
+    */
 
     //check_and_verify(max_iterations, N, M, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
     //print_states(N, M, T, init_prob, trans_prob, emit_prob);
@@ -115,4 +157,6 @@ int main(int argc, char **argv) {
     free(trans_prob);
     free(emit_prob);
     free(neg_log_likelihoods);
+
+
 }

@@ -152,7 +152,7 @@ void compute_baum_welch(
         neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         // convergence criterion
-        if (i > 0 && abs(neg_log_likelihoods[i] - neg_log_likelihoods[i-1]) < 1e-3) break;
+        //if (i > 0 && abs(neg_log_likelihoods[i] - neg_log_likelihoods[i-1]) < 1e-3) break;
 
         // reinitialization to 0.0 for the next iteration
         memset(bw.c_norm, 0, bw.K*bw.T*sizeof(double));
