@@ -70,7 +70,7 @@ void update_trans_prob(const BWdata& bw);
 void update_emit_prob(const BWdata& bw);
 
 
-void compute_baum_welch(
+int compute_baum_welch(
     const unsigned int max_iterations,
     const unsigned int K,
     const unsigned int N,
@@ -133,7 +133,11 @@ void compute_baum_welch(
     if (bw.gamma_sum == NULL) exit(1);
     if (bw.sigma_sum == NULL) exit(1);
 
+    int iter = 0;
+
     for (int i = 0; i < max_iterations; i++) {
+
+        iter++;
 
         forward_step(bw);
         backward_step(bw);
@@ -152,7 +156,7 @@ void compute_baum_welch(
         neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         // convergence criterion
-        //if (i > 0 && abs(neg_log_likelihoods[i] - neg_log_likelihoods[i-1]) < 1e-3) break;
+        if (i > 0 && abs(neg_log_likelihoods[i] - neg_log_likelihoods[i-1]) < 1e-3) break;
 
         // reinitialization to 0.0 for the next iteration
         memset(bw.c_norm, 0, bw.K*bw.T*sizeof(double));
@@ -173,6 +177,8 @@ void compute_baum_welch(
     free(bw.sigma);
     free(bw.gamma_sum);
     free(bw.sigma_sum);
+
+    return iter;
 }
 
 

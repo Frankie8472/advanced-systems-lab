@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     }
     const unsigned int max_iterations = atoi(argv[1]);
 
-    flops = max_iterations*(2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 6*K*N + K + 2*N*M*T + K*N*T + K*T + N + N*M);
+    flops = 2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 6*K*N + K + 2*N*M*T + K*N*T + K*T + N + N*M;
 
     /*
     unsigned int fp_cost = 0;
@@ -120,23 +120,29 @@ int main(int argc, char **argv) {
 
     // Actual performance measurements repeated REP times.
     double total_cycles = 0;
+    int iter = 0;
+    int total_iter = 0;
     for (size_t j = 0; j < REP; j++) {
 
         start = start_tsc();
         for (size_t i = 0; i < num_runs; ++i) {
-            compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+            iter += compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
         }
         end = stop_tsc(start);
 
         cycles = ((double)end) / num_runs;
         total_cycles += cycles;
+        iter /= num_runs;
+        total_iter += iter;
 
     }
     total_cycles /= REP;
+    total_iter /= REP;
 
 
     cycles = total_cycles;
-    perf =  round((100.0 * flops) / cycles) / 100.0;
+    iter = total_iter;
+    perf =  round((100.0 * iter*flops) / cycles) / 100.0;
 
     printf("Performance: %f\n", perf);
 
