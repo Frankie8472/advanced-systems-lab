@@ -218,7 +218,7 @@ inline void backward_step(const BWdata& bw) {
     for (int k = 0; k < bw.K; k++) {
         // t = bw.T, base case
         for (int n = 0; n < bw.N; n++) {
-            bw.beta[(k*bw.T + (bw.T-1))*bw.N + n] = 1.0*bw.c_norm[k*bw.T + (bw.T-1)];
+            bw.beta[(k*bw.T + (bw.T-1))*bw.N + n] = bw.c_norm[k*bw.T + (bw.T-1)];
         }
 
         // recursion step
