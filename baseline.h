@@ -42,10 +42,10 @@
 struct BWdata {
     const unsigned int K;  // number of observation sequences / training datasets
     const unsigned int N;  // number of hidden state variables
-    const unsigned int M;  // number of bw.observations
+    const unsigned int M;  // number of distinct observations
     const unsigned int T;  // number of time steps
 
-    // (for each oberservation/training sequence 0 <= k < K)
+    // (for each observation/training sequence 0 <= k < K)
     unsigned int* const observations; //  [K][T]          [k][t]            := observation sequence k at time_step t
     double* const init_prob; //           [N]             [n]               := P(X_1 = n)
     double* const trans_prob; //          [N][N]          [n0][n1]          := P(X_t = n1 | X_(t-1) = n0)

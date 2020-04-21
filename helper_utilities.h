@@ -21,10 +21,10 @@
 
 
 void initialize_uar(
-    const unsigned int K,
-    const unsigned int N,
-    const unsigned int M,
-    const unsigned int T,
+    const unsigned int K,  // number of observation sequences / training datasets
+    const unsigned int N,  // number of hidden state variables
+    const unsigned int M,  // number of distinct observations
+    const unsigned int T,  // number of time steps
     unsigned int* const observations,
     double* const init_prob,
     double* const trans_prob,
@@ -57,10 +57,10 @@ void initialize_uar(
 
 
 void initialize_random(
-    const unsigned int K,
-    const unsigned int N,
-    const unsigned int M,
-    const unsigned int T,
+    const unsigned int K,  // number of observation sequences / training datasets
+    const unsigned int N,  // number of hidden state variables
+    const unsigned int M,  // number of distinct observations
+    const unsigned int T,  // number of time steps
     unsigned int* const observations,
     double* const init_prob,
     double* const trans_prob,
@@ -73,30 +73,28 @@ void initialize_random(
 
     // randomly initialized init_prob
     init_sum = 0.0;
-    for (int n = 0; n < N; n++) {
-        init_prob[n] = rand();
-        init_sum += init_prob[n];
+    while(init_sum == 0.0){
+        for (int n = 0; n < N; n++) {
+            init_prob[n] = rand();
+            init_sum += init_prob[n];
+        }
     }
-    if (init_sum == 0.0) {
-        printf("init_sum is 0.0, bad luck, please restart");
-        exit(1);
-    }
+
     // the array init_prob must sum to 1.0
     for (int n = 0; n < N; n++) {
         init_prob[n] /= init_sum;
     }
 
-    // randonly initialized trans_prob rows
+    // randomly initialized trans_prob rows
     for (int n0 = 0; n0 < N; n0++) {
         trans_sum = 0.0;
-        for (int n1 = 0; n1 < N; n1++) {
-            trans_prob[n0*N + n1] = rand();
-            trans_sum += trans_prob[n0*N + n1];
+        while(trans_sum == 0.0){
+            for (int n1 = 0; n1 < N; n1++) {
+                trans_prob[n0*N + n1] = rand();
+                trans_sum += trans_prob[n0*N + n1];
+            }
         }
-        if (trans_sum == 0.0) {
-            printf("trans_sum is 0.0, bad luck, please restart");
-            exit(1);
-        }
+
         // the row trans_prob[n0*N] must sum to 1.0
         for (int n1 = 0; n1 < N; n1++) {
             trans_prob[n0*N + n1] /= trans_sum;
@@ -106,14 +104,13 @@ void initialize_random(
     // randomly initialized emit_prob rows
     for (int n = 0; n < N; n++) {
         emit_sum = 0.0;
-        for (int m = 0; m < M; m++) {
-            emit_prob[n*M + m] = rand();
-            emit_sum += emit_prob[n*M + m];
+        while (emit_sum == 0.0) {
+            for (int m = 0; m < M; m++) {
+                emit_prob[n * M + m] = rand();
+                emit_sum += emit_prob[n * M + m];
+            }
         }
-        if (emit_sum == 0.0) {
-            printf("emit_sum is 0.0, bad luck, please restart");
-            exit(1);
-        }
+
         // the row emit_prob[n*M] must sum to 1.0
         for (int m = 0; m < M; m++) {
             emit_prob[n*M + m] /= emit_sum;
@@ -130,7 +127,7 @@ void initialize_random(
     }
 }
 
-
+// TODO: Description
 void check_and_verify(
     const unsigned int max_iterations,
     const unsigned int N,

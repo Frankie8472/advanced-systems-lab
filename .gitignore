@@ -2,3 +2,5 @@ benchmarks
 verifications
 .vscode
 .vscode/
+.idea/
+CMakeLists.txt
