@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     const unsigned int M = 4; // number of observations
     const unsigned int T = 4; // number of time steps
     if ( argc != 2 ) {
-        printf("usage: FW <max_iterations>\n");
+        printf("usage: %s <max_iterations>\n", argv[0]);
         return -1;
     }
     const unsigned int max_iterations = atoi(argv[1]);
