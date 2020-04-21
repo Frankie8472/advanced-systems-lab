@@ -3,5 +3,6 @@ verifications
 .vscode
 .vscode/
 .idea/
+build/
 CMakeLists.txt
 cmake-build-debug/

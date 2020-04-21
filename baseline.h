@@ -159,13 +159,13 @@ int compute_baum_welch(
         if (i > 0 && abs(neg_log_likelihoods[i] - neg_log_likelihoods[i-1]) < 1e-3) break;
 
         // reinitialization to 0.0 for the next iteration
-        memset(bw.c_norm, 0, bw.K*bw.T*sizeof(double));
-        memset(bw.alpha, 0, bw.K*bw.T*bw.N*sizeof(double));
-        memset(bw.beta, 0, bw.K*bw.T*bw.N*sizeof(double));
-        memset(bw.ggamma, 0, bw.K*bw.T*bw.N*sizeof(double));
-        memset(bw.sigma, 0, bw.K*bw.T*bw.N*bw.N*sizeof(double));
-        memset(bw.gamma_sum, 0, bw.K*bw.N*sizeof(double));
-        memset(bw.sigma_sum, 0, bw.K*bw.N*bw.N*sizeof(double));
+        //memset(bw.c_norm, 0, bw.K*bw.T*sizeof(double));
+        //memset(bw.alpha, 0, bw.K*bw.T*bw.N*sizeof(double));
+        //memset(bw.beta, 0, bw.K*bw.T*bw.N*sizeof(double));
+        //memset(bw.ggamma, 0, bw.K*bw.T*bw.N*sizeof(double));
+        //memset(bw.sigma, 0, bw.K*bw.T*bw.N*bw.N*sizeof(double));
+        //memset(bw.gamma_sum, 0, bw.K*bw.N*sizeof(double));
+        //memset(bw.sigma_sum, 0, bw.K*bw.N*bw.N*sizeof(double));
 
         //print_states(N, M, T, init_prob, trans_prob, emit_prob);
     }
@@ -185,6 +185,7 @@ int compute_baum_welch(
 inline void forward_step(const BWdata& bw) {
     for (int k = 0; k < bw.K; k++) {
         // t = 0, base case
+        bw.c_norm[k*bw.T + 0] = 0;
         for (int n = 0; n < bw.N; n++) {
             bw.alpha[(k*bw.T + 0)*bw.N + n] = bw.init_prob[n]*bw.emit_prob[n*bw.M + bw.observations[k*bw.T + 0]];
             bw.c_norm[k*bw.T + 0] += bw.alpha[(k*bw.T + 0)*bw.N + n];
@@ -192,11 +193,12 @@ inline void forward_step(const BWdata& bw) {
 
         bw.c_norm[k*bw.T + 0] = 1.0/bw.c_norm[k*bw.T + 0];
         for (int n = 0; n < bw.N; n++){
-	    bw.alpha[(k*bw.T + 0)*bw.N + n] *= bw.c_norm[k*bw.T + 0];
-	}
+	        bw.alpha[(k*bw.T + 0)*bw.N + n] *= bw.c_norm[k*bw.T + 0];
+	    }
 
         // recursion step
         for (int t = 1; t < bw.T; t++) {
+            bw.c_norm[k*bw.T + t] = 0;
             for (int n0 = 0; n0 < bw.N; n0++) {
                 double alpha_temp = 0.0;
                 for (int n1 = 0; n1 < bw.N; n1++) {
