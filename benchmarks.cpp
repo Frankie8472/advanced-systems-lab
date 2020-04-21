@@ -23,7 +23,6 @@
 #include "helper_utilities.h"
 // all versions (may overwrite each other)
 #include "baseline.h"
-//#include "sota.h"
 //#include "scalar_optimized.h"
 //#include "vector_optimized.h"
 //#include "combined_optimized.h"
