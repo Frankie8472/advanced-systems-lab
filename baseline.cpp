@@ -39,26 +39,7 @@
 #include <cmath>
 #include <cstring>
 
-struct BWdata {
-    const unsigned int K;  // number of observation sequences / training datasets
-    const unsigned int N;  // number of hidden state variables
-    const unsigned int M;  // number of distinct observations
-    const unsigned int T;  // number of time steps
-
-    // (for each observation/training sequence 0 <= k < K)
-    unsigned int* const observations; //  [K][T]          [k][t]            := observation sequence k at time_step t
-    double* const init_prob; //           [N]             [n]               := P(X_1 = n)
-    double* const trans_prob; //          [N][N]          [n0][n1]          := P(X_t = n1 | X_(t-1) = n0)
-    double* const emit_prob; //           [N][M]          [n][m]            := P(Y_t = y_m | X_t = n)
-    double* const c_norm; //              [K][T]          [k][t]            :=  scaling/normalization factor for numerical stability
-    double* const alpha; //               [K][T][N]       [k][t][n]         :=  P(Y_1 = y_1, ..., Y_t = y_t, X_t = n, theta)
-    double* const beta; //                [K][T][N]       [k][t][n]         :=  P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = n, theta)
-    double* const ggamma; //              [K][T][N]       [k][t][n]         :=  P(X_t = n | Y, theta)
-    double* const sigma; //               [K][T][N][N]    [k][t][n0][n1]    :=  P(X_t = n0, X_(t+1) = n1 | Y, theta)
-    // where theta = {init_prob, trans_prob, emit_prob} represent the model parameters we want learn/refine/estimate iteratively.
-    double* const gamma_sum; //           [K][N]
-    double* const sigma_sum; //           [K][N][N]
-};
+#include "common.h"
 
 
 void forward_step(const BWdata& bw);
@@ -68,70 +49,11 @@ void compute_sigma(const BWdata& bw);
 void update_init_prob(const BWdata& bw);
 void update_trans_prob(const BWdata& bw);
 void update_emit_prob(const BWdata& bw);
+int compute_baum_welch(const BWdata& bw, const unsigned int max_iterations);
 
+REGISTER_FUNCTION(compute_baum_welch, "Baseline");
 
-int compute_baum_welch(
-    const unsigned int max_iterations,
-    const unsigned int K,
-    const unsigned int N,
-    const unsigned int M,
-    const unsigned int T,
-    unsigned int* const observations,
-    double* const init_prob,
-    double* const trans_prob,
-    double* const emit_prob,
-    double* const neg_log_likelihoods
-    ) {
-
-    if (K < 4 || K % 4 != 0) {
-        printf("\nVIOLATION: K is %d, but must be >= 4 and divisible by 4", K);
-        exit(1);
-    }
-    if (N < 4 || N % 4 != 0) {
-        printf("\nVIOLATION: N is %d, but must be >= 4 and divisible by 4", N);
-        exit(1);
-    }
-    if (M < 4 || M % 4 != 0) {
-        printf("\nVIOLATION: M is %d, but must be >= 4 and divisible by 4", M);
-        exit(1);
-    }
-    if (T < 4 || T % 4 != 0) {
-        printf("\nVIOLATION: T is %d, but must be >= 4 and divisible by 4", T);
-        exit(1);
-    }
-
-    const BWdata& bw = {
-        K,
-        N,
-        M,
-        T,
-        observations,
-        init_prob,
-        trans_prob,
-        emit_prob,
-        // c_norm
-        (double *)calloc(K*T, sizeof(double)),
-        // alpha
-        (double *)calloc(K*T*N, sizeof(double)),
-        // beta
-        (double *)calloc(K*T*N, sizeof(double)),
-        // ggamma
-        (double *)calloc(K*T*N, sizeof(double)),
-        // sigma
-        (double *)calloc(K*T*N*N, sizeof(double)),
-        // ggamma_sum
-        (double *)calloc(K*N, sizeof(double)),
-        // sigma_sum
-        (double *)calloc(K*N*N, sizeof(double))
-    };
-
-    if (bw.c_norm == NULL) exit(1);
-    if (bw.alpha == NULL) exit(1);
-    if (bw.beta == NULL) exit(1);
-    if (bw.ggamma == NULL) exit(1);
-    if (bw.sigma == NULL) exit(1);
-    if (bw.gamma_sum == NULL) exit(1);
-    if (bw.sigma_sum == NULL) exit(1);
+int compute_baum_welch(const BWdata& bw, const unsigned int max_iterations){
 
     int iter = 0;
 
@@ -150,13 +72,13 @@ int compute_baum_welch(
         double neg_log_likelihood_sum = 0.0;
         for (int k = 0; k < bw.K; k++) {
             for (int t = 0; t < bw.T; t++) {
-                neg_log_likelihood_sum = neg_log_likelihood_sum - log(bw.c_norm[k*T + t]);
+                neg_log_likelihood_sum = neg_log_likelihood_sum - log(bw.c_norm[k*bw.T + t]);
             }
         }
-        neg_log_likelihoods[i] = neg_log_likelihood_sum;
+        bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         // convergence criterion
-        if (i > 0 && abs(neg_log_likelihoods[i] - neg_log_likelihoods[i-1]) < 1e-3) break;
+        if (i > 0 && abs(bw.neg_log_likelihoods[i] - bw.neg_log_likelihoods[i-1]) < 1e-3) break;
 
         // reinitialization to 0.0 for the next iteration
         //memset(bw.c_norm, 0, bw.K*bw.T*sizeof(double));
@@ -169,14 +91,6 @@ int compute_baum_welch(
 
         //print_states(N, M, T, init_prob, trans_prob, emit_prob);
     }
-
-    free(bw.c_norm);
-    free(bw.alpha);
-    free(bw.beta);
-    free(bw.ggamma);
-    free(bw.sigma);
-    free(bw.gamma_sum);
-    free(bw.sigma_sum);
 
     return iter;
 }

@@ -15,12 +15,15 @@
     -----------------------------------------------------------------------------------
 */
 
+#if !defined(__BW_HELPER_UTILITIES_H)
+#define __BW_HELPER_UTILITIES_H
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <random>
 
 
-void initialize_uar(
+inline void initialize_uar(
     const unsigned int K,  // number of observation sequences / training datasets
     const unsigned int N,  // number of hidden state variables
     const unsigned int M,  // number of distinct observations
@@ -56,7 +59,7 @@ void initialize_uar(
 }
 
 
-void initialize_random(
+inline void initialize_random(
     const unsigned int K,  // number of observation sequences / training datasets
     const unsigned int N,  // number of hidden state variables
     const unsigned int M,  // number of distinct observations
@@ -128,7 +131,7 @@ void initialize_random(
 }
 
 // TODO: Description
-void check_and_verify(
+inline void check_and_verify(
     const unsigned int max_iterations,
     const unsigned int N,
     const unsigned int M,
@@ -194,7 +197,7 @@ void check_and_verify(
 }
 
 
-void print_states(
+inline void print_states(
     const unsigned int N,
     const unsigned int M,
     const unsigned int T,
@@ -223,3 +226,5 @@ void print_states(
     }
     printf("\n");
 }
+
+#endif /* __BW_HELPER_UTILITIES_H */
