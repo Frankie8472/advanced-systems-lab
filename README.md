@@ -65,10 +65,6 @@ Should be thoroughly verified. There's a chance of probabilities degenerating to
 
 For simplicity reasons and to be able to optimize as best as possible, we assume anyway that K, N, M and T each are at least 4 and divisible by 4, which solves the problem in most to all cases. It could only occur if the (random) initialization of the observational data is very unlucky.
 
-### "sota.cpp" Implementation
-
-TODO
-
 ### "scalar_optimized.cpp" Implementation
 
 TODO
