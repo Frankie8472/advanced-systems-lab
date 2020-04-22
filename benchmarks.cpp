@@ -18,15 +18,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <climits>
+#include <vector>
 // custom files for the project
 #include "tsc_x86.h"
 #include "helper_utilities.h"
-// all versions (may overwrite each other)
-#include "baseline.h"
-//#include "sota.h"
-//#include "scalar_optimized.h"
-//#include "vector_optimized.h"
-//#include "combined_optimized.h"
+#include "common.h"
+
 
 #define NUM_RUNS 1
 #define CYCLES_REQUIRED 1e8
@@ -52,50 +50,26 @@ total: (1 add + 1 mul)*K*N²*T + (2 add + 5 muls)*K*N²*(T-1) + (2 adds)*K*N² +
 
 int flops;
 
-int main(int argc, char **argv) {
+size_t test(__attribute__((unused)) const BWdata& bw){
+    return 0;   
+}
 
-    // randomize seed
-    srand(time(NULL));
+REGISTER_FUNCTION(test, "Test");
 
-    const unsigned int K = 4; // number of observation sequences / training datasets
-    const unsigned int N = 4; // number of hidden state variables
-    const unsigned int M = 4; // number of observations
-    const unsigned int T = 4; // number of time steps
-    if ( argc != 2 ) {
-        printf("usage: %s <max_iterations>\n", argv[0]);
-        return -1;
-    }
-    const unsigned int max_iterations = atoi(argv[1]);
 
-    flops = 2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 5*K*N + K + 2*N*M*K + K*T + N + N*M;
 
-    /*
-    unsigned int fp_cost = 0;
-    fp_cost += 1*T;
-    fp_cost += 1*N;
-    fp_cost += 1*N*N;
-    fp_cost += 1*N*M;
-    fp_cost += 3*T*N;
-    fp_cost += 1*T*N*N;
-    */
-
-    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-    unsigned int* const observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
-    if (observations == NULL) exit(1);
-    double* const init_prob = (double *)calloc(N, sizeof(double));
-    if (init_prob == NULL) exit(1);
-    double* const trans_prob = (double *)calloc(N*N, sizeof(double));
-    if (trans_prob == NULL) exit(1);
-    double* const emit_prob = (double *)calloc(N*M, sizeof(double));
-    if (emit_prob == NULL) exit(1);
-    double* const neg_log_likelihoods = (double *)calloc(max_iterations, sizeof(double));
-    if (neg_log_likelihoods == NULL) exit(1);
-
-    initialize_uar(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
-
+void perf_test(compute_bw_func func, 
+               const size_t K, 
+               const size_t N,
+               const size_t M,
+               const size_t T,
+               const size_t max_iterations){
+    
+    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)    
+    const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
 
     double cycles = 0.;
-    long num_runs = 100;
+    size_t num_runs = 100;
     double multiplier = 1;
     double perf;
     myInt64 start, end;
@@ -106,9 +80,10 @@ int main(int argc, char **argv) {
     // This helps excluding timing overhead when measuring small runtimes.
     do {
         num_runs = num_runs * multiplier;
+
         start = start_tsc();
         for (size_t i = 0; i < num_runs; i++) {
-            compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+            func(bw);
         }
         end = stop_tsc(start);
 
@@ -120,13 +95,13 @@ int main(int argc, char **argv) {
 
     // Actual performance measurements repeated REP times.
     double total_cycles = 0;
-    int iter = 0;
-    int total_iter = 0;
+    size_t iter = 0;
+    size_t total_iter = 0;
     for (size_t j = 0; j < REP; j++) {
 
         start = start_tsc();
         for (size_t i = 0; i < num_runs; ++i) {
-            iter += compute_baum_welch(max_iterations, K, N, M, T, observations, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
+            iter += func(bw);
         }
         end = stop_tsc(start);
 
@@ -157,12 +132,39 @@ int main(int argc, char **argv) {
 
     //check_and_verify(max_iterations, N, M, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
     //print_states(N, M, T, init_prob, trans_prob, emit_prob);
+    clean_BWdata(bw);
+}
 
-    free(observations);
-    free(init_prob);
-    free(trans_prob);
-    free(emit_prob);
-    free(neg_log_likelihoods);
 
+int main(int argc, char **argv) {
+    // randomize seed
+    srand(time(NULL));
+
+    const size_t K = 4; // number of observation sequences / training datasets
+    const size_t N = 4; // number of hidden state variables
+    const size_t M = 4; // number of observations
+    const size_t T = 4; // number of time steps
+    if ( argc != 2 ) {
+        printf("usage: %s <max_iterations>\n", argv[0]);
+        return -1;
+    }
+    const size_t max_iterations = atoi(argv[1]);
+
+    flops = 2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 5*K*N + K + 2*N*M*K + K*T + N + N*M;
+    
+    /*
+    unsigned int fp_cost = 0;
+    fp_cost += 1*T;
+    fp_cost += 1*N;
+    fp_cost += 1*N*N;
+    fp_cost += 1*N*M;
+    fp_cost += 3*T*N;
+    fp_cost += 1*T*N*N;
+    */
+    
+    for(size_t i = 0; i < FuncRegister::size(); i++){
+        printf("Running: %s\n", FuncRegister::func_names->at(i).c_str());
+        perf_test(FuncRegister::user_funcs->at(i), K, N, M, T, max_iterations);
+    }
 
 }
