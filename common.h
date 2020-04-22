@@ -23,13 +23,14 @@
 #include "helper_utilities.h"
 
 struct BWdata {
-    const unsigned int K;  // number of observation sequences / training datasets
-    const unsigned int N;  // number of hidden state variables
-    const unsigned int M;  // number of distinct observations
-    const unsigned int T;  // number of time steps
+    const size_t K;  // number of observation sequences / training datasets
+    const size_t N;  // number of hidden state variables
+    const size_t M;  // number of distinct observations
+    const size_t T;  // number of time steps
+    const size_t max_iterations; // Number of maximum iterations that should be performed
 
     // (for each observation/training sequence 0 <= k < K)
-    unsigned int* const observations; //  [K][T]          [k][t]            := observation sequence k at time_step t
+    size_t* const observations;       //  [K][T]          [k][t]            := observation sequence k at time_step t
     double* const init_prob; //           [N]             [n]               := P(X_1 = n)
     double* const trans_prob; //          [N][N]          [n0][n1]          := P(X_t = n1 | X_(t-1) = n0)
     double* const emit_prob; //           [N][M]          [n][m]            := P(Y_t = y_m | X_t = n)
@@ -49,39 +50,39 @@ struct BWdata {
  * \brief Initiallizes the struct that holds all information needed to execute the algorithm.
  */
 inline const BWdata& initialize_BWdata(
-    const unsigned int K,
-    const unsigned int N,
-    const unsigned int M,
-    const unsigned int T,
-    const unsigned int max_iterations
+    const size_t K,
+    const size_t N,
+    const size_t M,
+    const size_t T,
+    const size_t max_iterations
     ) {
 
     if (K < 4 || K % 4 != 0) {
-        printf("\nVIOLATION: K is %d, but must be >= 4 and divisible by 4", K);
+        printf("\x1b[1;31mVIOLATION:\x1b[0m K is %zu, but must be >= 4 and divisible by 4\n", K);
         exit(1);
     }
     if (N < 4 || N % 4 != 0) {
-        printf("\nVIOLATION: N is %d, but must be >= 4 and divisible by 4", N);
+        printf("\x1b[1;31mVIOLATION:\x1b[0m N is %zu, but must be >= 4 and divisible by 4\n", N);
         exit(1);
     }
     if (M < 4 || M % 4 != 0) {
-        printf("\nVIOLATION: M is %d, but must be >= 4 and divisible by 4", M);
+        printf("\x1b[1;31mVIOLATION:\x1b[0m M is %zu, but must be >= 4 and divisible by 4\n", M);
         exit(1);
     }
     if (T < 4 || T % 4 != 0) {
-        printf("\nVIOLATION: T is %d, but must be >= 4 and divisible by 4", T);
+        printf("\x1b[1;31mVIOLATION:\x1b[0m T is %zu, but must be >= 4 and divisible by 4\n", T);
         exit(1);
     }
-     unsigned int* const observations = (unsigned int *)calloc(K*T, sizeof(unsigned int));
-    if (observations == NULL) exit(1);
+    size_t* const observations = (size_t *)calloc(K*T, sizeof(size_t));
+    if (observations == NULL) exit(2);
     double* const init_prob = (double *)calloc(N, sizeof(double));
-    if (init_prob == NULL) exit(1);
+    if (init_prob == NULL) exit(2);
     double* const trans_prob = (double *)calloc(N*N, sizeof(double));
-    if (trans_prob == NULL) exit(1);
+    if (trans_prob == NULL) exit(2);
     double* const emit_prob = (double *)calloc(N*M, sizeof(double));
-    if (emit_prob == NULL) exit(1);
+    if (emit_prob == NULL) exit(2);
     double* const neg_log_likelihoods = (double *)calloc(max_iterations, sizeof(double));
-    if (neg_log_likelihoods == NULL) exit(1);
+    if (neg_log_likelihoods == NULL) exit(2);
     
     initialize_uar(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
 
@@ -90,10 +91,12 @@ inline const BWdata& initialize_BWdata(
         N,
         M,
         T,
+        max_iterations,
         observations,
         init_prob,
         trans_prob,
         emit_prob,
+        neg_log_likelihoods,
         // c_norm
         (double *)calloc(K*T, sizeof(double)),
         // alpha
@@ -111,18 +114,18 @@ inline const BWdata& initialize_BWdata(
     };
 
 
-    if (bw.c_norm == NULL) exit(1);
-    if (bw.alpha == NULL) exit(1);
-    if (bw.beta == NULL) exit(1);
-    if (bw.ggamma == NULL) exit(1);
-    if (bw.sigma == NULL) exit(1);
-    if (bw.gamma_sum == NULL) exit(1);
-    if (bw.sigma_sum == NULL) exit(1);
+    if (bw.c_norm == NULL) exit(2);
+    if (bw.alpha == NULL) exit(2);
+    if (bw.beta == NULL) exit(2);
+    if (bw.ggamma == NULL) exit(2);
+    if (bw.sigma == NULL) exit(2);
+    if (bw.gamma_sum == NULL) exit(2);
+    if (bw.sigma_sum == NULL) exit(2);
 
     // I hate C++ so doing C style
                                                
     BWdata* bw_ptr = (BWdata*)malloc(sizeof(BWdata));
-    if (bw_ptr == NULL) exit(1);
+    if (bw_ptr == NULL) exit(2);
     memcpy(bw_ptr, &bw, sizeof(BWdata));
     
     return *bw_ptr;
@@ -146,17 +149,37 @@ inline void clean_BWdata(const BWdata& bw){
 /**
  * Function interface for an implementation for the Baum-Welch algorithm
  */
-typedef int(*compute_bw_func)(const BWdata& bw, const unsigned int max_iterations);
-void add_function(compute_bw_func f, std::string name);
+typedef size_t(*compute_bw_func)(const BWdata& bw);
+
+class FuncRegister
+{
+public:
+    static void add_function(compute_bw_func f, std::string name);
+    
+    static void printRegisteredFuncs()
+    {
+        for(size_t i = 0; i < size(); i++){
+            printf("%s at %p\n", (*func_names).at(i).c_str(), (*user_funcs).at(i));
+        }
+    }
+
+    static size_t size()
+    {
+        return (*user_funcs).size();   
+    }
+    
+    static std::vector<compute_bw_func> *user_funcs;
+    static std::vector<std::string> *func_names;
+};
 
 // Macro to register a function and a name that should be executed
 #define REGISTER_FUNCTION(f, name)                                \
-    static struct cls##_                                          \
+    static struct f##_                                            \
     {                                                             \
-        cls##_()                                                  \
+        f##_()                                                    \
         {                                                         \
-            add_function(f, name);                                \
+            FuncRegister::add_function(f, name);                  \
         }                                                         \
-    } cls##__BW_;
+    } f##__BW_;
 
 #endif /* __BW_COMMON_H */
