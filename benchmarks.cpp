@@ -24,10 +24,7 @@
 #include "tsc_x86.h"
 #include "helper_utilities.h"
 #include "common.h"
-//#include "sota.h"
-//#include "scalar_optimized.h"
-//#include "vector_optimized.h"
-//#include "combined_optimized.h"
+
 
 #define NUM_RUNS 1
 #define CYCLES_REQUIRED 1e8

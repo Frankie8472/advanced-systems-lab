@@ -22,14 +22,8 @@
 #include <unistd.h>
 // custom files for the project
 #include "helper_utilities.h"
-// all versions
-// only activate one at a time
-// (may overwrite each other)
 #include "common.h"
-//#include "sota.h"
-//#include "scalar_optimized.h"
-//#include "vector_optimized.h"
-//#include "combined_optimized.h"
+
 
 
 void test_case_1(compute_bw_func func);
