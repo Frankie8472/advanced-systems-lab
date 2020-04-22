@@ -49,13 +49,13 @@ void compute_sigma(const BWdata& bw);
 void update_init_prob(const BWdata& bw);
 void update_trans_prob(const BWdata& bw);
 void update_emit_prob(const BWdata& bw);
-size_t compute_baum_welch(const BWdata& bw);
+size_t comp_bw(const BWdata& bw);
 
 
-REGISTER_FUNCTION(compute_baum_welch, "Baseline");
+REGISTER_FUNCTION(comp_bw, "Baseline");
 
 
-size_t compute_baum_welch(const BWdata& bw){
+size_t comp_bw(const BWdata& bw){
 
     size_t iter = 0;
 
