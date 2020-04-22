@@ -8,6 +8,12 @@ Josua Cantieni, Franz Knobel, Cheuk Yu Chan, Ramon Witschi
 
 ETH Computer Science MSc, Computer Science Department ETH Zurich
 
+## Overleaf
+
+https://www.overleaf.com/read/fsqqnxhfhnvx
+
+View-only link for supervisors to observe progress on the report.
+
 ## Compiler
 
 We use gcc 9.2.1.
