@@ -30,11 +30,6 @@ void test_case_1(compute_bw_func func);
 void test_case_2(compute_bw_func func);
 void test_case_randomized(compute_bw_func func);
 
-size_t test(__attribute__((unused)) const BWdata& bw){
-    return 0;   
-}
-
-REGISTER_FUNCTION(test, "Test");
 
 int main() {
 

@@ -50,13 +50,6 @@ total: (1 add + 1 mul)*K*N²*T + (2 add + 5 muls)*K*N²*(T-1) + (2 adds)*K*N² +
 
 int flops;
 
-size_t test(__attribute__((unused)) const BWdata& bw){
-    return 0;   
-}
-
-REGISTER_FUNCTION(test, "Test");
-
-
 
 void perf_test(compute_bw_func func, 
                const size_t K, 

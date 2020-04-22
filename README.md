@@ -50,7 +50,8 @@ To register your function in the benchmark system add the following line to your
 REGISTER_FUNCTION(func_name, "A description about the implementation");
 ```
 
-CAUTION: Be aware that you cannot name your function the same as another implementation in a different file. The linker is not able to do that right now.
+**CAUTION**: Be aware that you cannot name your function the same as another implementation in a different file. The linker is not able to do that right now.
+
 
 ### "baseline.cpp" Implementation
 
