@@ -4,4 +4,3 @@ verifications
 .vscode/
 .idea/
 build/
-CMakeLists.txt
