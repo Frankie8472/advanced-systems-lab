@@ -20,7 +20,7 @@
 
 #include <string>
 #include <cstring>
-#include "helper_utilities.h"
+#include <vector>
 
 struct BWdata {
     const size_t K;  // number of observation sequences / training datasets
@@ -48,6 +48,8 @@ struct BWdata {
 
 /**
  * \brief Initiallizes the struct that holds all information needed to execute the algorithm.
+ *        The matices allocated here are zeroed. To initialize with usefull date call the 
+ *        appropriate functions.
  */
 inline const BWdata& initialize_BWdata(
     const size_t K,
@@ -73,18 +75,32 @@ inline const BWdata& initialize_BWdata(
         printf("\x1b[1;31mVIOLATION:\x1b[0m T is %zu, but must be >= 4 and divisible by 4\n", T);
         exit(1);
     }
+
     size_t* const observations = (size_t *)calloc(K*T, sizeof(size_t));
-    if (observations == NULL) exit(2);
     double* const init_prob = (double *)calloc(N, sizeof(double));
-    if (init_prob == NULL) exit(2);
     double* const trans_prob = (double *)calloc(N*N, sizeof(double));
-    if (trans_prob == NULL) exit(2);
     double* const emit_prob = (double *)calloc(N*M, sizeof(double));
-    if (emit_prob == NULL) exit(2);
     double* const neg_log_likelihoods = (double *)calloc(max_iterations, sizeof(double));
+    double* const c_norm = (double *)calloc(K*T, sizeof(double));
+    double* const alpha = (double *)calloc(K*T*N, sizeof(double));
+    double* const beta = (double *)calloc(K*T*N, sizeof(double));
+    double* const ggamma = (double *)calloc(K*T*N, sizeof(double));
+    double* const sigma = (double *)calloc(K*T*N*N, sizeof(double));
+    double* const ggamma_sum = (double *)calloc(K*N, sizeof(double));
+    double* const sigma_sum = (double *)calloc(K*N*N, sizeof(double));
+
+    if (observations == NULL) exit(2);
+    if (init_prob == NULL) exit(2);
+    if (trans_prob == NULL) exit(2);
+    if (emit_prob == NULL) exit(2);
     if (neg_log_likelihoods == NULL) exit(2);
-    
-    initialize_uar(K, N, M, T, observations, init_prob, trans_prob, emit_prob);
+    if (c_norm == NULL) exit(2);
+    if (alpha == NULL) exit(2);
+    if (beta == NULL) exit(2);
+    if (ggamma == NULL) exit(2);
+    if (sigma == NULL) exit(2);
+    if (ggamma_sum == NULL) exit(2);
+    if (sigma_sum == NULL) exit(2);
 
     const BWdata& bw = {
         K,
@@ -97,37 +113,21 @@ inline const BWdata& initialize_BWdata(
         trans_prob,
         emit_prob,
         neg_log_likelihoods,
-        // c_norm
-        (double *)calloc(K*T, sizeof(double)),
-        // alpha
-        (double *)calloc(K*T*N, sizeof(double)),
-        // beta
-        (double *)calloc(K*T*N, sizeof(double)),
-        // ggamma
-        (double *)calloc(K*T*N, sizeof(double)),
-        // sigma
-        (double *)calloc(K*T*N*N, sizeof(double)),
-        // ggamma_sum
-        (double *)calloc(K*N, sizeof(double)),
-        // sigma_sum
-        (double *)calloc(K*N*N, sizeof(double))
+        c_norm,
+        alpha,
+        beta,
+        ggamma,
+        sigma,
+        ggamma_sum,
+        sigma_sum,
     };
 
-
-    if (bw.c_norm == NULL) exit(2);
-    if (bw.alpha == NULL) exit(2);
-    if (bw.beta == NULL) exit(2);
-    if (bw.ggamma == NULL) exit(2);
-    if (bw.sigma == NULL) exit(2);
-    if (bw.gamma_sum == NULL) exit(2);
-    if (bw.sigma_sum == NULL) exit(2);
-
     // I hate C++ so doing C style
-                                               
-    BWdata* bw_ptr = (BWdata*)malloc(sizeof(BWdata));
+
+    BWdata* bw_ptr = (BWdata*)calloc(1, sizeof(BWdata));
     if (bw_ptr == NULL) exit(2);
     memcpy(bw_ptr, &bw, sizeof(BWdata));
-    
+
     return *bw_ptr;
 }
 

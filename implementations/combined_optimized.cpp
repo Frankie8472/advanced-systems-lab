@@ -61,7 +61,7 @@ size_t comp_bw_combined(const BWdata& bw){
         // convergence criterion
         if (i > 0 && abs(bw.neg_log_likelihoods[i] - bw.neg_log_likelihoods[i-1]) < 1e-3) break;
 
-        //print_states(N, M, T, init_prob, trans_prob, emit_prob);
+        //print_states(bw);
     }
 
     return iter;

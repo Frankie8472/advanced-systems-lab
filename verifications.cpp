@@ -26,39 +26,54 @@
 
 
 
-void test_case_1(compute_bw_func func);
-void test_case_2(compute_bw_func func);
-void test_case_randomized(compute_bw_func func);
+bool test_case_1(compute_bw_func func);
+bool test_case_2(compute_bw_func func);
+bool test_case_randomized(compute_bw_func func);
 
 
 int main() {
 
     // randomize seed
     size_t tn = time(NULL);
-    
-    //printf("\nTest Case Custom 1 with srand(%zu)\n", tn);
-    //test_case_1();
-    //printf("\nTest Case Custom 2 with srand(%zu)\n", tn);
-    //test_case_2();
 
-    for(size_t f = 0; f < FuncRegister::size(); f++){
-        printf("----------------------------------\n");
-        printf("Testing: %s\n", FuncRegister::func_names->at(f).c_str());
-        printf("----------------------------------\n");
+    std::vector<bool> testResults;
+
+    for(size_t f = 0; f < FuncRegister::size(); f++) {
+        bool success = true;
+        printf("\x1b[1m\n----------------------------------\x1b[0m\n");
+        printf("\x1b[1mTesting: %s\x1b[0m\n", FuncRegister::func_names->at(f).c_str());
+        printf("\x1b[1m----------------------------------\x1b[0m\n");
+        //printf("\nTest Case Custom 1 with srand(%zu)\n", tn);
+        //success = test_case_1(FuncRegister::user_funcs->at(f)) && success;
+        //printf("\nTest Case Custom 2 with srand(%zu)\n", tn);
+        //success = test_case_2(FuncRegister::user_funcs->at(f)) && success;
         size_t iters = 10;
         for (size_t i = 0; i < iters; i++) {
             tn = time(NULL);
             srand(tn);
-            printf("\nTest Case Randomized %zu with srand(%zu)\n", i, tn);
-            test_case_randomized(FuncRegister::user_funcs->at(f));
+            printf("Test Case Randomized %zu with srand(%zu)\n", i, tn);
+            success = test_case_randomized(FuncRegister::user_funcs->at(f)) && success;
+        }
+        testResults.push_back(success);
+    }
+
+    printf("\nAll Tests Done!\n\n");
+
+    printf("Results:\n");
+    printf("----------------------------------\n");
+    for(size_t i = 0; i < testResults.size(); i++) {
+        if(testResults.at(i)){
+            printf("\x1b[1;32mSUCCEED:\x1b[0m '%s'\n", FuncRegister::func_names->at(i).c_str());
+        } else {
+            printf("\x1b[1;31mFAIL:\x1b[0m    '%s' \n", FuncRegister::func_names->at(i).c_str());
         }
     }
-    
-    printf("\nAll Tests Done!\n\n");
+    printf("----------------------------------\n");
+
 }
 
 
-void test_case_1(compute_bw_func func) {
+bool test_case_1(compute_bw_func func) {
 
     const size_t K = 4;
     const size_t N = 4;
@@ -67,18 +82,20 @@ void test_case_1(compute_bw_func func) {
     const size_t max_iterations = 1000;
 
     const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
-    initialize_random(K, N, M, T, bw.observations, bw.init_prob, bw.trans_prob, bw.emit_prob);
+    initialize_random(bw);
     printf("\nInitialized: K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
     
     func(bw);
-    check_and_verify(max_iterations, N, M, bw.init_prob, bw.trans_prob, bw.emit_prob, bw.neg_log_likelihoods);
-    //print_states(N, M, T, init_prob, trans_prob, emit_prob);
+    bool success = check_and_verify(bw);
+    //print_states(bw);
 
     clean_BWdata(bw);
+
+    return success;
 }
 
 
-void test_case_2(compute_bw_func func) {
+bool test_case_2(compute_bw_func func) {
 
     const size_t K = 4;
     const size_t N = 4;
@@ -120,14 +137,16 @@ void test_case_2(compute_bw_func func) {
 
     printf("\nInitialized: K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
     func(bw);
-    check_and_verify(max_iterations, N, M, bw.init_prob, bw.trans_prob, bw.emit_prob, bw.neg_log_likelihoods);
-    print_states(N, M, T, bw.init_prob, bw.trans_prob, bw.emit_prob);
+    bool success = check_and_verify(bw);
+    print_states(bw);
 
     clean_BWdata(bw);
+
+    return success;
 }
 
 
-void test_case_randomized(compute_bw_func func) {
+bool test_case_randomized(compute_bw_func func) {
 
     const size_t K = (rand() % 8)*4 + 4;
     const size_t N = (rand() % 9)*4 + 4;
@@ -139,10 +158,12 @@ void test_case_randomized(compute_bw_func func) {
 
 
     const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
-    initialize_random(K, N, M, T, bw.observations, bw.init_prob, bw.trans_prob, bw.emit_prob);
+    initialize_random(bw);
     printf("\nInitialized: K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
     func(bw);
-    check_and_verify(max_iterations, N, M, bw.init_prob, bw.trans_prob, bw.emit_prob, bw.neg_log_likelihoods);
+    bool success = check_and_verify(bw);
 
     clean_BWdata(bw);
+
+    return success;
 }

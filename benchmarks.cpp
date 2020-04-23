@@ -60,6 +60,7 @@ void perf_test(compute_bw_func func,
     
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)    
     const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
+    initialize_uar(bw);
 
     double cycles = 0.;
     size_t num_runs = 100;
@@ -123,8 +124,8 @@ void perf_test(compute_bw_func func,
     printf("\n");
     */
 
-    //check_and_verify(max_iterations, N, M, init_prob, trans_prob, emit_prob, neg_log_likelihoods);
-    //print_states(N, M, T, init_prob, trans_prob, emit_prob);
+    //check_and_verify(bw);
+    //print_states(bw);
     clean_BWdata(bw);
 }
 
