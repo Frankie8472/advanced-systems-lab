@@ -161,23 +161,30 @@ inline void backward_step(const BWdata& bw) {
         // t = bw.T, base case
 
         // Init
-        double c_norm = 0;
-        double beta, beta_sum, init_prob, emit_prob, trans_prob;
-        size_t observations = bw.observations[k*bw.T + 0];
+        double alpha, beta, beta_sum, c_norm, gamma, emit_prob, trans_prob;
+        size_t observations;
 
+        // Load
+        c_norm = bw.c_norm[k*bw.T + (bw.T-1)];
         for (size_t n = 0; n < bw.N; n++) {
-            bw.beta[(k*bw.T + (bw.T-1))*bw.N + n] = bw.c_norm[k*bw.T + (bw.T-1)];
+            // Load
+            alpha = bw.alpha[(k*bw.T + (bw.T-1))*bw.N + n];
+
+            // Store
+            bw.beta[(k*bw.T + (bw.T-1))*bw.N + n] = c_norm;
+            bw.ggamma[(k*bw.T + (bw.T-1))*bw.N + n] = alpha;
         }
 
-        // recursion step
+        // Recursion step
         for (int t = bw.T-2; t >= 0; t--) {
             // Load
             observations = bw.observations[k*bw.T + (t+1)];
             c_norm = bw.c_norm[k * bw.T + t];
 
             for (size_t n0 = 0; n0 < bw.N; n0++) {
-                // Init
+                // Load
                 beta_sum = 0.0;
+                alpha = bw.alpha[(k*bw.T + t)*bw.N + n0];
 
                 for (size_t n1 = 0; n1 < bw.N; n1++) {
                     // Load
@@ -191,9 +198,11 @@ inline void backward_step(const BWdata& bw) {
 
                 // Calculate
                 beta = beta_sum * c_norm;
+                gamma = alpha * beta_sum;
 
                 // Store
                 bw.beta[(k*bw.T + t)*bw.N + n0] = beta;
+                bw.ggamma[(k*bw.T + t)*bw.N + n0] = gamma;
             }
         }
     }
@@ -202,6 +211,7 @@ inline void backward_step(const BWdata& bw) {
 
 inline void compute_gamma(const BWdata& bw) {
     // Init
+    /*
     double c_norm, alpha, beta, gamma;
 
     for (size_t k = 0; k < bw.K; k++) {
@@ -221,7 +231,7 @@ inline void compute_gamma(const BWdata& bw) {
                 bw.ggamma[(k*bw.T + t)*bw.N + n] = gamma;
             }
         }
-    }
+    }*/
 
     // sum up bw.ggamma (from t = 0 to bw.T-2; serve as normalizer for bw.trans_prob)
     for (size_t k = 0; k < bw.K; k++) {
