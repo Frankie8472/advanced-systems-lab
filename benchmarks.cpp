@@ -113,7 +113,9 @@ void perf_test(compute_bw_func func,
     iter = total_iter;
     perf =  round((100.0 * iter*flops) / cycles) / 100.0;
 
-    printf("Performance: %f\n", perf);
+    printf("Iterations: %ld\n", iter);
+    printf("Cycles: %f\n", round(cycles));
+    printf("Performance: %f\n\n", perf);
 
     /*
     printf("\n");

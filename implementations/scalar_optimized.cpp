@@ -79,7 +79,7 @@ inline void forward_step(const BWdata& bw) {
 
         // Init
         c_norm = 0;;
-        size_t observations = bw.observations[k*bw.T + 0];
+        size_t observations = bw.observations[k*bw.T];
         kT = k*bw.T;
 
         for (size_t n = 0; n < bw.N; n++) {
@@ -92,14 +92,14 @@ inline void forward_step(const BWdata& bw) {
             c_norm += alpha;
 
             // Store
-            bw.alpha[(k*bw.T + 0)*bw.N + n] = alpha;
+            bw.alpha[k*bw.T*bw.N + n] = alpha;
         }
 
         // Calculate
         c_norm = 1.0/c_norm;
 
         //Init
-        kTN = (k*bw.T + 0)*bw.N;
+        kTN = k*bw.T*bw.N;
 
         for (size_t n = 0; n < bw.N; n++){
             // Load
@@ -113,7 +113,7 @@ inline void forward_step(const BWdata& bw) {
         }
 
         // Store
-        bw.c_norm[k*bw.T + 0] = c_norm;
+        bw.c_norm[k*bw.T] = c_norm;
 
         // recursion step
         for (size_t t = 1; t < bw.T; t++) {
@@ -332,7 +332,7 @@ inline void update_init_prob(const BWdata& bw) {
 
         for (size_t k = 0; k < bw.K; k++) {
             // Calculate
-            g0_sum += bw.ggamma[(k*bw.T + 0)*bw.N + n];
+            g0_sum += bw.ggamma[k*bw.T*bw.N + n];
         }
 
         //Store
