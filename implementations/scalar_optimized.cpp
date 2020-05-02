@@ -47,7 +47,6 @@ size_t comp_bw_scalar(const BWdata& bw){
         update_init_prob(bw);
         update_trans_prob(bw);
         update_emit_prob(bw);
-        //
 
         double neg_log_likelihood_sum = 0.0;
         double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
