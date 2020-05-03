@@ -167,8 +167,8 @@ inline void forward_step(const BWdata& bw) {
 
 inline void backward_step(const BWdata& bw) {
     // Init
-    double alpha, beta, beta_sum, c_norm, gamma, emit_prob, trans_prob;
-    size_t observations, kTN, kT, nN;
+    double alpha, beta, beta_sum, c_norm, gamma, sigma, emit_prob, trans_prob;
+    size_t observations, kTN, kTNN, kT, nN;
 
     for (size_t k = 0; k < bw.K; k++) {
         // t = bw.T, base case
@@ -198,6 +198,7 @@ inline void backward_step(const BWdata& bw) {
                 beta_sum = 0.0;
                 alpha = bw.alpha[(k*bw.T + t)*bw.N + n0];
                 nN = n0 * bw.N;
+                kTNN = ((kT + t)*bw.N + n0)*bw.N;
 
                 for (size_t n1 = 0; n1 < bw.N; n1++) {
                     // Load
@@ -207,6 +208,10 @@ inline void backward_step(const BWdata& bw) {
 
                     // Calculate
                     beta_sum += beta * trans_prob * emit_prob;
+                    sigma = alpha * trans_prob * beta * emit_prob;
+
+                    // Store
+                    bw.sigma[kTNN + n1] = sigma;
                 }
 
                 // Calculate
@@ -274,8 +279,10 @@ inline void compute_sigma(const BWdata& bw) {
     size_t observations, kTN, nN, kTNN, kNN, kT, kN;
 
     for (size_t k = 0; k < bw.K; k++) {
+
         kT = k*bw.T;
         kN = k*bw.N;
+        /*
         for (size_t t = 0; t < bw.T-1; t++) {
             //Load
             observations = bw.observations[k*bw.T + (t+1)];
@@ -301,7 +308,7 @@ inline void compute_sigma(const BWdata& bw) {
                 }
             }
         }
-
+        */
         // sum up bw.sigma (from t = 0 to bw.T-1)
         for (size_t n0 = 0; n0 < bw.N; n0++) {
             kNN = (kN + n0)*bw.N;

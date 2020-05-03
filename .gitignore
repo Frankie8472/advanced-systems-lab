@@ -4,4 +4,5 @@ verifications
 .vscode/
 .idea/
 build/
+cmake-build-debug/
 CMakeLists.txt.user
