@@ -256,6 +256,8 @@ inline void compute_gamma(const BWdata& bw) {
     // Init
     double g_sum, s_sum;
     size_t kT, kN, kNN, kTN, kTNN;
+    // Init blocking
+    size_t start, end, regs = 7;
 
     for (size_t k = 0; k < bw.K; k++) {
         // Init
@@ -281,6 +283,23 @@ inline void compute_gamma(const BWdata& bw) {
                 }
             }
 
+            // Start blocking
+            size_t b1 = 0;
+            for (; b1+regs < bw.N; b1 += regs){
+                start = b1;
+                end = b1+regs;
+
+                for (size_t t = 1; t < bw.T-1; t++) {
+                    // Init
+                    kTN = (kT + t) * bw.N;
+                    kTNN = (kTN + n0) * bw.N;
+
+                    for (size_t n1 = start; n1 < end; n1++){
+                        bw.sigma_sum[kNN + n1] += bw.sigma[kTNN + n1];
+                    }
+                }
+            }
+
             for (size_t t = 1; t < bw.T-1; t++) {
                 // Init
                 kTN = (kT + t) * bw.N;
@@ -289,8 +308,7 @@ inline void compute_gamma(const BWdata& bw) {
                 // Calculate
                 g_sum += bw.ggamma[kTN + n0];
 
-
-                for (size_t n1 = 0; n1 < bw.N; n1++){
+                for (size_t n1 = b1; n1 < bw.N; n1++) {
                     bw.sigma_sum[kNN + n1] += bw.sigma[kTNN + n1];
                 }
             }
