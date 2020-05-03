@@ -46,7 +46,7 @@ size_t comp_bw_scalar_jc1(const BWdata& bw){
         backward_step_jc(bw);
         compute_gamma_jc(bw);
         //compute_sigma_jc(bw);
-        update_init_prob_jc(bw);
+        //update_init_prob_jc(bw);
         update_trans_prob_jc(bw);
         update_emit_prob_jc(bw);
 
@@ -188,11 +188,11 @@ inline void compute_sigma_jc(const BWdata& bw) {
 
 inline void update_init_prob_jc(const BWdata& bw) {
     for (size_t n = 0; n < bw.N; n++) {
-        double g0_sum = 0.0;
+        
         for (size_t k = 0; k < bw.K; k++) {
-            g0_sum += bw.ggamma[(k*bw.T + 0)*bw.N + n];
+            
         }
-        bw.init_prob[n] = g0_sum/bw.K;
+        
     }
 }
 
@@ -202,11 +202,16 @@ inline void update_trans_prob_jc(const BWdata& bw) {
         for (size_t n1 = 0; n1 < bw.N; n1++) {
             double numerator_sum = 0.0;
             double denominator_sum = 0.0;
+            double g0_sum = 0.0;
             for (size_t k = 0; k < bw.K; k++) {
                 numerator_sum += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1];
                 denominator_sum += bw.gamma_sum[k*bw.N + n0];
+                if(n0 == 0)
+                    g0_sum += bw.ggamma[(k*bw.T + 0)*bw.N + n1];
             }
             bw.trans_prob[n0*bw.N + n1] = numerator_sum / denominator_sum;
+            if(n0 == 0)
+                bw.init_prob[n1] = g0_sum/bw.K;
         }
     }
 }
@@ -214,8 +219,8 @@ inline void update_trans_prob_jc(const BWdata& bw) {
 
 inline void update_emit_prob_jc(const BWdata& bw) {
     // add last bw.T-step to bw.gamma_sum
-    for (size_t k = 0; k < bw.K; k++) {
-        for (size_t n = 0; n < bw.N; n++) {
+    for (size_t n = 0; n < bw.N; n++) {
+        for (size_t k = 0; k < bw.K; k++) {
             bw.gamma_sum[k*bw.N + n] += bw.ggamma[(k*bw.T + (bw.T-1))*bw.N + n];
         }
     }
