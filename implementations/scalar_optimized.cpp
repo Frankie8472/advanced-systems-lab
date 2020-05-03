@@ -43,7 +43,7 @@ size_t comp_bw_scalar(const BWdata& bw){
         forward_step(bw);
         backward_step(bw);
         compute_gamma(bw);
-        compute_sigma(bw);
+        //compute_sigma(bw);
         update_init_prob(bw);
         update_trans_prob(bw);
         update_emit_prob(bw);
@@ -198,7 +198,7 @@ inline void backward_step(const BWdata& bw) {
                 beta_sum = 0.0;
                 alpha = bw.alpha[(k*bw.T + t)*bw.N + n0];
                 nN = n0 * bw.N;
-                kTNN = ((kT + t)*bw.N + n0)*bw.N;
+                kTNN = (kTN + n0)*bw.N;
 
                 for (size_t n1 = 0; n1 < bw.N; n1++) {
                     // Load
@@ -254,20 +254,51 @@ inline void compute_gamma(const BWdata& bw) {
     // sum up bw.ggamma (from t = 0 to bw.T-2; serve as normalizer for bw.trans_prob)
 
     // Init
-    double g_sum;
+    double g_sum, s_sum;
+    size_t kT, kN, kNN, kTN, kTNN;
 
     for (size_t k = 0; k < bw.K; k++) {
-        for (size_t n = 0; n < bw.N; n++) {
+        // Init
+        kT = k*bw.T;
+        kN = k*bw.N;
+
+        for (size_t n0 = 0; n0 < bw.N; n0++) {
             // Init
+            kNN = (kN + n0)*bw.N;
+
             g_sum = 0.0;
 
-            for (size_t t = 0; t < bw.T-1; t++) {
+            for (size_t t = 0; t < 1; t++) {
+                // Init
+                kTN = (kT + t) * bw.N;
+                kTNN = (kTN + n0) * bw.N;
+
                 // Calculate
-                g_sum += bw.ggamma[(k*bw.T + t)*bw.N + n];
+                g_sum += bw.ggamma[kTN + n0];
+
+                for (size_t n1 = 0; n1 < bw.N; n1++){
+                    bw.sigma_sum[kNN + n1] = bw.sigma[kTNN + n1];
+                }
+            }
+
+            for (size_t t = 1; t < bw.T-1; t++) {
+                // Init
+                kTN = (kT + t) * bw.N;
+                kTNN = (kTN + n0) * bw.N;
+
+                // Calculate
+                g_sum += bw.ggamma[kTN + n0];
+
+
+                for (size_t n1 = 0; n1 < bw.N; n1++){
+                    bw.sigma_sum[kNN + n1] += bw.sigma[kTNN + n1];
+                }
             }
 
             // Store
-            bw.gamma_sum[k*bw.N + n] = g_sum;
+            bw.gamma_sum[k*bw.N + n0] = g_sum;
+
+
         }
     }
 }
@@ -309,7 +340,7 @@ inline void compute_sigma(const BWdata& bw) {
             }
         }
         */
-        // sum up bw.sigma (from t = 0 to bw.T-1)
+        // sum up bw.sigma (from t = 0 to bw.T-2)
         for (size_t n0 = 0; n0 < bw.N; n0++) {
             kNN = (kN + n0)*bw.N;
             for (size_t n1 = 0; n1 < bw.N; n1++) {
