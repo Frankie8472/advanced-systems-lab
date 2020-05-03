@@ -206,21 +206,14 @@ inline void backward_step(const BWdata& bw) {
                     trans_prob = bw.trans_prob[nN + n1];
                     emit_prob = bw.emit_prob[n1 * bw.M + observations];
 
-                    // Calculate
+                    // Calculate & store
                     beta_sum += beta * trans_prob * emit_prob;
-                    sigma = alpha * trans_prob * beta * emit_prob;
-
-                    // Store
-                    bw.sigma[kTNN + n1] = sigma;
+                    bw.sigma[kTNN + n1] = alpha * trans_prob * beta * emit_prob;
                 }
 
-                // Calculate
-                beta = beta_sum * c_norm;
-                gamma = alpha * beta_sum;
-
-                // Store
-                bw.beta[kTN + n0] = beta;
-                bw.ggamma[kTN + n0] = gamma;
+                // Calculate & store
+                bw.beta[kTN + n0] = beta_sum * c_norm;
+                bw.ggamma[kTN + n0] = alpha * beta_sum;
             }
         }
     }
@@ -228,113 +221,35 @@ inline void backward_step(const BWdata& bw) {
 
 
 inline void compute_gamma(const BWdata& bw) {
-    // Init
-    /*
-    double c_norm, alpha, beta, gamma;
-
-    for (size_t k = 0; k < bw.K; k++) {
-        for (size_t t = 0; t < bw.T; t++) {
-            // Load
-            c_norm = bw.c_norm[k*bw.T + t];
-
-            for (size_t n = 0; n < bw.N; n++) {
-                // Load
-                alpha = bw.alpha[(k*bw.T + t)*bw.N + n];
-                beta = bw.beta[(k*bw.T + t)*bw.N + n];
-
-                // Calculate
-                gamma = alpha * beta / c_norm;
-
-                // Store
-                bw.ggamma[(k*bw.T + t)*bw.N + n] = gamma;
-            }
-        }
-    }*/
-
-    // sum up bw.ggamma (from t = 0 to bw.T-2; serve as normalizer for bw.trans_prob)
-
-    // Init
-    double g_sum, s_sum;
-    size_t kT, kN, kNN, kTN, kTNN;
-
+    // ====== Sum up bw.ggamma (from t = 0 to bw.T-2; serve as normalizer for bw.trans_prob) =====
     for (size_t k = 0; k < bw.K; k++) {
         // Init
-        kT = k*bw.T;
-        kN = k*bw.N;
+        double g_sum, s_sum;
 
         for (size_t n0 = 0; n0 < bw.N; n0++) {
             // Init
-            kNN = (kN + n0)*bw.N;
+            g_sum = bw.ggamma[(k*bw.T + 0)*bw.N + n0];
 
-            g_sum = 0.0;
-
-            // ===== First iteration =====
-            // Init
-            kTN = (kT + 0) * bw.N;
-            kTNN = (kTN + n0) * bw.N;
-
-            // Calculate
-            g_sum += bw.ggamma[kTN + n0];
-
-            for (size_t n1 = 0; n1 < bw.N; n1++){
-                bw.sigma_sum[kNN + n1] = bw.sigma[kTNN + n1];
-            }
-
-            // ===== Blocking iteration with 7 =====
-            // Start blocking
-            size_t b1 = 0;
-            double s0, s1, s2, s3, s4, s5, s6;
-            for (; b1+7 < bw.N; b1 += 7){
-                s0 = 0;
-                s1 = 0;
-                s2 = 0;
-                s3 = 0;
-                s4 = 0;
-                s5 = 0;
-                s6 = 0;
-
-                for (size_t t = 1; t < bw.T-1; t++) {
-                    // Init
-                    kTN = (kT + t) * bw.N;
-                    kTNN = (kTN + n0) * bw.N;
-
-                    s0 += bw.sigma[kTNN + b1 +0];
-                    s1 += bw.sigma[kTNN + b1 +1];
-                    s2 += bw.sigma[kTNN + b1 +2];
-                    s3 += bw.sigma[kTNN + b1 +3];
-                    s4 += bw.sigma[kTNN + b1 +4];
-                    s5 += bw.sigma[kTNN + b1 +5];
-                    s6 += bw.sigma[kTNN + b1 +6];
-                }
-
-                bw.sigma_sum[kNN + b1 +0] = s0;
-                bw.sigma_sum[kNN + b1 +1] = s1;
-                bw.sigma_sum[kNN + b1 +2] = s2;
-                bw.sigma_sum[kNN + b1 +3] = s3;
-                bw.sigma_sum[kNN + b1 +4] = s4;
-                bw.sigma_sum[kNN + b1 +5] = s5;
-                bw.sigma_sum[kNN + b1 +6] = s6;
-
-            }
-
-            // ===== Last iterations until bw.N is reached =====
             for (size_t t = 1; t < bw.T-1; t++) {
-                // Init
-                kTN = (kT + t) * bw.N;
-                kTNN = (kTN + n0) * bw.N;
-
-                // Calculate
-                g_sum += bw.ggamma[kTN + n0];   // Only here needed, in blocking
-
-                for (size_t n1 = b1; n1 < bw.N; n1++) {
-                    bw.sigma_sum[kNN + n1] += bw.sigma[kTNN + n1];
-                }
+                // Calculation
+                g_sum += bw.ggamma[(k*bw.T + t)*bw.N + n0];
             }
 
             // Store
             bw.gamma_sum[k*bw.N + n0] = g_sum;
 
+            for (size_t n1 = 0; n1 < bw.N; n1++) {
+                // Init
+                s_sum = bw.sigma[((k*bw.T + 0)*bw.N + n0) * bw.N + n1];
 
+                for (size_t t = 1; t < bw.T-1; t++) {
+                    // Calculation
+                    s_sum += bw.sigma[((k*bw.T + t)*bw.N + n0) * bw.N + n1];
+                }
+
+                // Store
+                bw.sigma_sum[(k*bw.N + n0) * bw.N + n1] = s_sum;
+            }
         }
     }
 }
