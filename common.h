@@ -132,6 +132,7 @@ inline const BWdata& initialize_BWdata(
 }
 
 inline void clean_BWdata(const BWdata& bw){
+    // Free matricies
     free(bw.c_norm);
     free(bw.alpha);
     free(bw.beta);
@@ -144,6 +145,10 @@ inline void clean_BWdata(const BWdata& bw){
     free(bw.trans_prob);
     free(bw.emit_prob);
     free(bw.neg_log_likelihoods);
+    
+    // make bw data invalid
+    BWdata* bw_ptr = (BWdata *)&bw;
+    memset(bw_ptr, 0, sizeof(BWdata));
 }
 
 /**
