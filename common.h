@@ -30,11 +30,11 @@ struct BWdata {
     const size_t max_iterations; // Number of maximum iterations that should be performed
 
     // (for each observation/training sequence 0 <= k < K)
-    size_t* const observations;       //  [K][T]          [k][t]            := observation sequence k at time_step t
-    double* const init_prob; //           [N]             [n]               := P(X_1 = n)
-    double* const trans_prob; //          [N][N]          [n0][n1]          := P(X_t = n1 | X_(t-1) = n0)
-    double* const emit_prob; //           [N][M]          [n][m]            := P(Y_t = y_m | X_t = n)
-    double* const neg_log_likelihoods; // Array to store the neg_log_likelihood for each iteration
+    size_t* const observations; //        [K][T]          [k][t]            :=  observation sequence k at time_step t
+    double* const init_prob; //           [N]             [n]               :=  P(X_1 = n)
+    double* const trans_prob; //          [N][N]          [n0][n1]          :=  P(X_t = n1 | X_(t-1) = n0)
+    double* const emit_prob; //           [N][M]          [n][m]            :=  P(Y_t = y_m | X_t = n)
+    double* const neg_log_likelihoods; // [max_iterations] [it]             :=  array to store the neg_log_likelihood for each iteration
     double* const c_norm; //              [K][T]          [k][t]            :=  scaling/normalization factor for numerical stability
     double* const alpha; //               [K][T][N]       [k][t][n]         :=  P(Y_1 = y_1, ..., Y_t = y_t, X_t = n, theta)
     double* const beta; //                [K][T][N]       [k][t][n]         :=  P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = n, theta)
@@ -59,6 +59,7 @@ inline const BWdata& initialize_BWdata(
     const size_t max_iterations
     ) {
 
+    /*
     if (K < 4 || K % 4 != 0) {
         printf("\x1b[1;31mVIOLATION:\x1b[0m K is %zu, but must be >= 4 and divisible by 4\n", K);
         exit(1);
@@ -75,6 +76,7 @@ inline const BWdata& initialize_BWdata(
         printf("\x1b[1;31mVIOLATION:\x1b[0m T is %zu, but must be >= 4 and divisible by 4\n", T);
         exit(1);
     }
+    */
 
     size_t* const observations = (size_t *)calloc(K*T, sizeof(size_t));
     double* const init_prob = (double *)calloc(N, sizeof(double));
