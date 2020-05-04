@@ -222,7 +222,7 @@ bool test_case_1(compute_bw_func func) {
     const size_t T = 4;
     const size_t max_iterations = 1000;
 
-    const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);
     printf("\nInitialized: K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
     
@@ -244,7 +244,7 @@ bool test_case_2(compute_bw_func func) {
     const size_t T = 32;
     const size_t max_iterations = 1000;
 
-    const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
 
     bw.observations[0*T + 5] = 1;
     bw.observations[0*T + 6] = 1;
@@ -298,7 +298,7 @@ bool test_case_randomized(compute_bw_func func) {
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
 
 
-    const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);
     printf("\nInitialized: K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
     func(bw);

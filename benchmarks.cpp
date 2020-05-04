@@ -26,11 +26,11 @@
 #include "common.h"
 
 
-#define NUM_RUNS 1
+#define NUM_RUNS 10000
 #define CYCLES_REQUIRED 1e8
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
-#define REP 50
+#define REP 20
 
 
 /*
@@ -59,46 +59,56 @@ void perf_test(compute_bw_func func,
                const size_t max_iterations){
     
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)    
-    const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
+    initialize_uar(bw);
     
-
     double cycles = 0.;
-    size_t num_runs = 100;
-    double multiplier = 1;
+    size_t num_runs = NUM_RUNS;
+    //double multiplier = 1;
     double perf;
     myInt64 start, end;
+    std::vector<const BWdata *> bw_data(num_runs);
 
-#ifdef CALIBRATE
-    // Warm-up phase: we determine a number of executions that allows
-    // the code to be executed for at least CYCLES_REQUIRED cycles.
-    // This helps excluding timing overhead when measuring small runtimes.
-    do {
-        num_runs = num_runs * multiplier;
-        initialize_uar(bw);
-        start = start_tsc();
-        for (size_t i = 0; i < num_runs; i++) {
-            func(bw);
-        }
-        end = stop_tsc(start);
-
-        cycles = (double)end;
-        multiplier = (CYCLES_REQUIRED) / (cycles);
-
-    } while (multiplier > 2);
-#endif
-
+//#ifdef CALIBRATE
+//    // Warm-up phase: we determine a number of executions that allows
+//    // the code to be executed for at least CYCLES_REQUIRED cycles.
+//    // This helps excluding timing overhead when measuring small runtimes.
+//    do {
+//        num_runs = num_runs * multiplier;
+//        start = start_tsc();
+//        for (size_t i = 0; i < num_runs; i++) {
+//            initialize_uar(bw);
+//            func(bw);
+//        }
+//        end = stop_tsc(start);
+//
+//        cycles = (double)end;
+//        multiplier = (CYCLES_REQUIRED) / (cycles);
+//
+//    } while (multiplier > 2);
+//#endif
     // Actual performance measurements repeated REP times.
     double total_cycles = 0;
     size_t iter = 0;
     size_t total_iter = 0;
     for (size_t j = 0; j < REP; j++) {
-        initialize_uar(bw);
+        // Create all copies for all runs of the function
+        for(size_t i = 0; i < num_runs; i++){
+            bw_data[i] = &copy_BWdata(bw);
+        }
+        
+        // Measure function
         start = start_tsc();
         for (size_t i = 0; i < num_runs; ++i) {
-            iter += func(bw);
+            iter += func(*bw_data.at(i));
         }
         end = stop_tsc(start);
-
+        
+        // Clean up all copies
+        for(size_t i = 0; i < num_runs; i++){
+            clean_BWdata(*bw_data.at(i));
+        }
+        
         cycles = ((double)end) / num_runs;
         total_cycles += cycles;
         iter /= num_runs;

@@ -8,8 +8,8 @@ add_executable(verification
     common.cpp
     verifications.cpp
     implementations/baseline.cpp
+    implementations/reordered_algorithm.cpp
     implementations/scalar_optimized.cpp
-    implementations/scalar_optimized_josua.cpp
     implementations/vector_optimized.cpp
     implementations/combined_optimized.cpp
 )
@@ -18,8 +18,8 @@ add_executable(benchmarks
     common.cpp
     benchmarks.cpp
     implementations/baseline.cpp
+    implementations/reordered_algorithm.cpp
     implementations/scalar_optimized.cpp
-    implementations/scalar_optimized_josua.cpp
     implementations/vector_optimized.cpp
     implementations/combined_optimized.cpp
 )
