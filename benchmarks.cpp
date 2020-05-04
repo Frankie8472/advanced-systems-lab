@@ -26,7 +26,7 @@
 #include "common.h"
 
 
-#define NUM_RUNS 10000
+#define NUM_RUNS 100
 #define CYCLES_REQUIRED 1e8
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
@@ -51,50 +51,52 @@ total: (1 add + 1 mul)*K*N²*T + (2 add + 5 muls)*K*N²*(T-1) + (2 adds)*K*N² +
 int flops;
 
 
-void perf_test(compute_bw_func func, 
-               const size_t K, 
-               const size_t N,
-               const size_t M,
-               const size_t T,
-               const size_t max_iterations){
-    
-    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)    
-    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
-    initialize_uar(bw);
-    
+void perf_test(compute_bw_func func, const BWdata& bw){
+
     double cycles = 0.;
-    size_t num_runs = NUM_RUNS;
-    //double multiplier = 1;
+    size_t num_runs = 1;
     double perf;
     myInt64 start, end;
-    std::vector<const BWdata *> bw_data(num_runs);
+    std::vector<const BWdata *> bw_data;
 
-//#ifdef CALIBRATE
-//    // Warm-up phase: we determine a number of executions that allows
-//    // the code to be executed for at least CYCLES_REQUIRED cycles.
-//    // This helps excluding timing overhead when measuring small runtimes.
-//    do {
-//        num_runs = num_runs * multiplier;
-//        start = start_tsc();
-//        for (size_t i = 0; i < num_runs; i++) {
-//            initialize_uar(bw);
-//            func(bw);
-//        }
-//        end = stop_tsc(start);
-//
-//        cycles = (double)end;
-//        multiplier = (CYCLES_REQUIRED) / (cycles);
-//
-//    } while (multiplier > 2);
-//#endif
+#if CALIBRATE
+    double multiplier = 1;
+    // Warm-up phase: we determine a number of executions that allows
+    // the code to be executed for at least CYCLES_REQUIRED cycles.
+    // This helps excluding timing overhead when measuring small runtimes.
+
+    do {
+        num_runs = num_runs * multiplier;
+        for(size_t i = 0; i < num_runs; i++){
+            bw_data.push_back(&copy_BWdata(bw));
+        }
+
+        start = start_tsc();
+        for (size_t i = 0; i < num_runs; i++) {
+            func(*bw_data.at(i));
+        }
+
+        end = stop_tsc(start);
+
+        for(size_t i = 0; i < num_runs; i++){
+            clean_BWdata(*bw_data.at(i));
+        }
+        bw_data.clear();
+        cycles = (double)end;
+        multiplier = (CYCLES_REQUIRED) / (cycles);
+
+    } while (multiplier > 2);
+
+#endif
     // Actual performance measurements repeated REP times.
+    printf("num_runs: %zu\n", num_runs);
     double total_cycles = 0;
     size_t iter = 0;
     size_t total_iter = 0;
     for (size_t j = 0; j < REP; j++) {
         // Create all copies for all runs of the function
         for(size_t i = 0; i < num_runs; i++){
-            bw_data[i] = &copy_BWdata(bw);
+            bw_data.push_back(&copy_BWdata(bw));
         }
         
         // Measure function
@@ -108,6 +110,7 @@ void perf_test(compute_bw_func func,
         for(size_t i = 0; i < num_runs; i++){
             clean_BWdata(*bw_data.at(i));
         }
+        bw_data.clear();
         
         cycles = ((double)end) / num_runs;
         total_cycles += cycles;
@@ -138,7 +141,6 @@ void perf_test(compute_bw_func func,
 
     //check_and_verify(bw);
     //print_states(bw);
-    clean_BWdata(bw);
 }
 
 
@@ -146,10 +148,10 @@ int main(int argc, char **argv) {
     // randomize seed
     srand(time(NULL));
 
-    const size_t K = 4; // number of observation sequences / training datasets
-    const size_t N = 4; // number of hidden state variables
-    const size_t M = 4; // number of observations
-    const size_t T = 4; // number of time steps
+    const size_t K = 28; // number of observation sequences / training datasets
+    const size_t N = 28; // number of hidden state variables
+    const size_t M = 28; // number of observations
+    const size_t T = 28; // number of time steps
     if ( argc != 2 ) {
         printf("usage: %s <max_iterations>\n", argv[0]);
         return -1;
@@ -168,9 +170,12 @@ int main(int argc, char **argv) {
     fp_cost += 1*T*N*N;
     */
     
+    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
+    initialize_random(bw);
     for(size_t i = 0; i < FuncRegister::size(); i++){
         printf("Running: %s\n", FuncRegister::func_names->at(i).c_str());
-        perf_test(FuncRegister::user_funcs->at(i), K, N, M, T, max_iterations);
+        perf_test(FuncRegister::user_funcs->at(i), bw);
     }
+    clean_BWdata(bw);
 
 }

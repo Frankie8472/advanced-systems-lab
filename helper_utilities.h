@@ -240,12 +240,12 @@ inline void print_states(const BWdata& bw) {
  */
 inline void print_BWdata(const BWdata& bw) {
 
-    printf("\nK %d, N %d, M %d, T %d, max_iterations %d\n", bw.K, bw.N, bw.M, bw.T, bw.max_iterations);
+    printf("\nK %zu, N %zu, M %zu, T %zu, max_iterations %zu\n", bw.K, bw.N, bw.M, bw.T, bw.max_iterations);
 
     printf("\nObservations (tip: shouldn't change after initialization):\n");
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
-            printf("obs[k = %zu][t = %zu] = %f\n", k, t, bw.observations[k*bw.T + t]);
+            printf("obs[k = %zu][t = %zu] = %zu\n", k, t, bw.observations[k*bw.T + t]);
         }
     }
 

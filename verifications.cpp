@@ -24,11 +24,6 @@
 #include "helper_utilities.h"
 #include "common.h"
 
-#define PRINT_PASSED(msg, ...) printf("\x1b[1;32mPASSED:\x1b[0m " msg "\n",  ##__VA_ARGS__)
-#define PRINT_FAIL(msg, ...) printf("\x1b[1;31mFAIL:\x1b[0m " msg "\n",  ##__VA_ARGS__)
-#define PRINT_VIOLATION(msg, num, ...) printf("\x1b[1;35m%zu VIOLATIONS:\x1b[0m " msg "\n", num,  ##__VA_ARGS__)
-
-
 bool test_case_0(compute_bw_func func);
 bool test_case_1(compute_bw_func func);
 bool test_case_2(compute_bw_func func);
@@ -49,16 +44,16 @@ int main() {
         printf("\x1b[1m----------------------------------\x1b[0m\n");
         printf("\nTest Case Custom 0 with srand(%zu)\n", tn);
         success = test_case_0(FuncRegister::user_funcs->at(f)) && success;
-        printf("\nTest Case Custom 1 with srand(%zu)\n", tn);
-        success = test_case_1(FuncRegister::user_funcs->at(f)) && success;
-        printf("\nTest Case Custom 2 with srand(%zu)\n", tn);
-        success = test_case_2(FuncRegister::user_funcs->at(f)) && success;
-        size_t iters = 10;
-        for (size_t i = 0; i < iters; i++) {
-            size_t tn = rand();
-            printf("Test Case Randomized %zu with srand(%zu)\n", i, tn);
-            success = test_case_randomized(FuncRegister::user_funcs->at(f)) && success;
-        }
+        //printf("\nTest Case Custom 1 with srand(%zu)\n", tn);
+        //success = test_case_1(FuncRegister::user_funcs->at(f)) && success;
+        //printf("\nTest Case Custom 2 with srand(%zu)\n", tn);
+        //success = test_case_2(FuncRegister::user_funcs->at(f)) && success;
+        //size_t iters = 10;
+        //for (size_t i = 0; i < iters; i++) {
+        //    size_t tn = rand();
+        //    printf("Test Case Randomized %zu with srand(%zu)\n", i, tn);
+        //    success = test_case_randomized(FuncRegister::user_funcs->at(f)) && success;
+        //}
         testResults.push_back(success);
     }
 
@@ -90,7 +85,7 @@ bool test_case_0(compute_bw_func func) {
     const size_t T = 10;
     const size_t max_iterations = 1; 
 
-    const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
     
     // we have 1 observation sequence with 10 observations
     // "E = eggs" is "1" and "N = no eggs" is "0"
@@ -137,14 +132,14 @@ bool test_case_0(compute_bw_func func) {
     if ( ! ( bw.init_prob[0] == 0.0 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("init_prob[0] = %f but should be %f", bw.init_prob[0], 0.0, errors);
+        PRINT_FAIL("init_prob[0] = %f but should be %f", bw.init_prob[0], 0.0);
     } else {
         PRINT_PASSED("init_prob[0] passed!");
     }
     if ( ! ( bw.init_prob[1] == 0.0 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("init_prob[1] = %f but should be %f", bw.init_prob[1], 0.0, errors);
+        PRINT_FAIL("init_prob[1] = %f but should be %f", bw.init_prob[1], 0.0);
     } else {
         PRINT_PASSED("init_prob[1] passed!");
     }
@@ -152,58 +147,62 @@ bool test_case_0(compute_bw_func func) {
     if ( ! ( bw.trans_prob[0*N + 0] == 0.3973 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("trans_prob[0][0] = %f but should be %f", bw.trans_prob[0*N + 0], 0.3973, errors);
+        PRINT_FAIL("trans_prob[0][0] = %f but should be %f", bw.trans_prob[0*N + 0], 0.3973);
     } else {
         PRINT_PASSED("trans_prob[0][0] passed!");
     }
     if ( ! ( bw.trans_prob[0*N + 1] == 0.6027 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("trans_prob[0][1] = %f but should be %f", bw.trans_prob[0*N + 1], 0.6027, errors);
+        PRINT_FAIL("trans_prob[0][1] = %f but should be %f", bw.trans_prob[0*N + 1], 0.6027);
     } else {
         PRINT_PASSED("trans_prob[0][1] passed!");
     }
     if ( ! ( bw.trans_prob[1*N + 0] == 	0.1833 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("trans_prob[1][0] = %f but should be %f", bw.trans_prob[1*N + 0], 0.1833, errors);
+        PRINT_FAIL("trans_prob[1][0] = %f but should be %f", bw.trans_prob[1*N + 0], 0.1833);
     } else {
         PRINT_PASSED("trans_prob[1][0] passed!");
     }
     if ( ! ( bw.trans_prob[1*N + 1] == 	0.8167 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("trans_prob[1][1] = %f but should be %f", bw.trans_prob[1*N + 1], 0.8167, errors);
+        PRINT_FAIL("trans_prob[1][1] = %f but should be %f", bw.trans_prob[1*N + 1], 0.8167);
     } else {
         PRINT_PASSED("trans_prob[1][1] passed!");
     }
     if ( ! ( bw.emit_prob[0*M + 0] == 0.0908 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("emit_prob[0][0] = %f but should be %f", bw.emit_prob[0*M + 0], 0.0908, errors);
+        PRINT_FAIL("emit_prob[0][0] = %f but should be %f", bw.emit_prob[0*M + 0], 0.0908);
     } else {
         PRINT_PASSED("emit_prob[0][0] passed!");
     }
     if ( ! ( bw.emit_prob[0*M + 1] == 0.9092 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("emit_prob[0][1] = %f but should be %f", bw.emit_prob[0*M + 1], 0.9092, errors);
+        PRINT_FAIL("emit_prob[0][1] = %f but should be %f", bw.emit_prob[0*M + 1], 0.9092);
     } else {
         PRINT_PASSED("emit_prob[0][1] passed!");
     }
     if ( ! ( bw.emit_prob[1*M + 0] == 0.5752 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("emit_prob[1][0] = %f but should be %f", bw.emit_prob[1*M + 0], 0.5752, errors);
+        PRINT_FAIL("emit_prob[1][0] = %f but should be %f", bw.emit_prob[1*M + 0], 0.5752);
     } else {
         PRINT_PASSED("emit_prob[1][0] passed!");
     }
     if ( ! ( bw.emit_prob[1*M + 1] == 0.4248 ) ) {
         errors += 1;
         success = false;
-        PRINT_VIOLATION("emit_prob[1][1] = %f but should be %f", bw.emit_prob[1*M + 1], 0.4248, errors);
+        PRINT_FAIL("emit_prob[1][1] = %f but should be %f", bw.emit_prob[1*M + 1], 0.4248);
     } else {
         PRINT_PASSED("emit_prob[1][1] passed!");
+    }
+
+    if(errors > 0){
+        PRINT_VIOLATION("In Wikipedia Testcase", errors);
     }
 
     print_BWdata(bw); // to check what's wrong

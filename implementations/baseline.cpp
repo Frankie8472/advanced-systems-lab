@@ -100,8 +100,8 @@ inline void forward_step(const BWdata& bw) {
 
         bw.c_norm[k*bw.T + 0] = 1.0/bw.c_norm[k*bw.T + 0];
         for (size_t n = 0; n < bw.N; n++){
-	        bw.alpha[(k*bw.T + 0)*bw.N + n] *= bw.c_norm[k*bw.T + 0];
-	    }
+            bw.alpha[(k*bw.T + 0)*bw.N + n] *= bw.c_norm[k*bw.T + 0];
+        }
 
         // recursion step
         for (size_t t = 1; t < bw.T; t++) {
