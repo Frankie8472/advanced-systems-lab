@@ -212,20 +212,20 @@ inline void print_states(const BWdata& bw) {
 
     printf("\nInitialization probabilities:\n");
     for(size_t n = 0; n < N; n++) {
-        printf("Pr[X_1 = %zu] = %f\n", n+1, bw.init_prob[n]);
+        printf("Pr[X_1 = %zu] = %f\n", n, bw.init_prob[n]);
     }
 
     printf("\nTransition probabilities:\n");
     for(size_t n0 = 0; n0 < N; n0++) {
         for(size_t n1 = 0; n1 < N; n1++) {
-            printf("Pr[X_t = %zu | X_(t-1) = %zu ] = %f\n", n1+1, n0+1, bw.trans_prob[n0*N + n1]);
+            printf("Pr[X_t = %zu | X_(t-1) = %zu ] = %f\n", n1, n0, bw.trans_prob[n0*N + n1]);
         }
     }
 
     printf("\nEmission probabilities:\n");
     for(size_t n = 0; n < N; n++) {
         for(size_t m = 0; m < M; m++) {
-            printf("Pr[Y_t = %zu | X_t = %zu] = %f\n", m+1, n+1, bw.emit_prob[n*M + m]);
+            printf("Pr[Y_t = %zu | X_t = %zu] = %f\n", m, n, bw.emit_prob[n*M + m]);
         }
     }
     printf("\n");
@@ -240,12 +240,12 @@ inline void print_states(const BWdata& bw) {
  */
 inline void print_BWdata(const BWdata& bw) {
 
-    printf("\nK %d, N %d, M %d, T %d, max_iterations %d", bw.K, bw.N, bw.M, bw.T, bw.max_iterations);
+    printf("\nK %d, N %d, M %d, T %d, max_iterations %d\n", bw.K, bw.N, bw.M, bw.T, bw.max_iterations);
 
     printf("\nObservations (tip: shouldn't change after initialization):\n");
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
-            printf("obs[k = %zu][t = %zu] = %f\n", k+1, t+1, bw.observations[k*bw.T + t]);
+            printf("obs[k = %zu][t = %zu] = %f\n", k, t, bw.observations[k*bw.T + t]);
         }
     }
 
@@ -253,13 +253,13 @@ inline void print_BWdata(const BWdata& bw) {
 
     printf("Negative Log Likelihoods (tip: should change once per iteration):\n");
     for (size_t it = 0; it < bw.max_iterations; it++) {
-        printf("NLL[it = %zu] = %f\n", it+1, bw.neg_log_likelihoods[it]);
+        printf("NLL[it = %zu] = %f\n", it, bw.neg_log_likelihoods[it]);
     }
 
     printf("\nc_norm:\n");
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
-            printf("c_norm[k = %zu][t = %zu] = %f\n", k+1, t+1, bw.c_norm[k*bw.T + t]);
+            printf("c_norm[k = %zu][t = %zu] = %f\n", k, t, bw.c_norm[k*bw.T + t]);
         }
     }
 
@@ -267,7 +267,7 @@ inline void print_BWdata(const BWdata& bw) {
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
             for (size_t n = 0; n < bw.N; n++) {
-                printf("alpha[k = %zu][t = %zu][n = %zu] = %f\n", k+1, t+1, n+1, bw.alpha[(k*bw.T + t)*bw.N + n]);
+                printf("alpha[k = %zu][t = %zu][n = %zu] = %f\n", k, t, n, bw.alpha[(k*bw.T + t)*bw.N + n]);
             }
         }
     }
@@ -276,7 +276,7 @@ inline void print_BWdata(const BWdata& bw) {
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
             for (size_t n = 0; n < bw.N; n++) {
-                printf("beta[k = %zu][t = %zu][n = %zu] = %f\n", k+1, t+1, n+1, bw.beta[(k*bw.T + t)*bw.N + n]);
+                printf("beta[k = %zu][t = %zu][n = %zu] = %f\n", k, t, n, bw.beta[(k*bw.T + t)*bw.N + n]);
             }
         }
     }
@@ -285,7 +285,7 @@ inline void print_BWdata(const BWdata& bw) {
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
             for (size_t n = 0; n < bw.N; n++) {
-                printf("ggamma[k = %zu][t = %zu][n = %zu] = %f\n", k+1, t+1, n+1, bw.ggamma[(k*bw.T + t)*bw.N + n]);
+                printf("ggamma[k = %zu][t = %zu][n = %zu] = %f\n", k, t, n, bw.ggamma[(k*bw.T + t)*bw.N + n]);
             }
         }
     }
@@ -293,7 +293,7 @@ inline void print_BWdata(const BWdata& bw) {
     printf("\ngamma_sum:\n");
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t n = 0; n < bw.N; n++) {
-            printf("gamma_sum[k = %zu][n = %zu] = %f\n", k+1, n+1, bw.gamma_sum[k*bw.N + n]);
+            printf("gamma_sum[k = %zu][n = %zu] = %f\n", k, n, bw.gamma_sum[k*bw.N + n]);
         }
     }
 
@@ -302,7 +302,7 @@ inline void print_BWdata(const BWdata& bw) {
         for (size_t t = 0; t < bw.T; t++) {
             for (size_t n0 = 0; n0 < bw.N; n0++) {
                 for(size_t n1 = 0; n1 < bw.N; n1++) {
-                    printf("sigma[k = %zu][t = %zu][n0 = %zu][n1 = %zu] = %f\n", k+1, t+1, n0+1, n1+1, bw.sigma[((k*bw.T + t)*bw.N + n0)*bw.N + n1]);
+                    printf("sigma[k = %zu][t = %zu][n0 = %zu][n1 = %zu] = %f\n", k, t, n0, n1, bw.sigma[((k*bw.T + t)*bw.N + n0)*bw.N + n1]);
                 }
             }
         }
@@ -312,7 +312,7 @@ inline void print_BWdata(const BWdata& bw) {
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t n0 = 0; n0 < bw.N; n0++) {
             for (size_t n1 = 0; n1 < bw.N; n1++) {
-                printf("sigma_sum[k = %zu][n0 = %zu][n1 = %zu] = %f\n", k+1, n0+1, n1+1, bw.sigma_sum[(k*bw.N + n0)*bw.N + n1]);
+                printf("sigma_sum[k = %zu][n0 = %zu][n1 = %zu] = %f\n", k, n0, n1, bw.sigma_sum[(k*bw.N + n0)*bw.N + n1]);
             }
         }
     }

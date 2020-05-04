@@ -121,9 +121,10 @@ bool test_case_0(compute_bw_func func) {
     bw.emit_prob[1*M + 0] = 0.8;
     bw.emit_prob[1*M + 1] = 0.2;
 
-    //print_BWdata(bw); // to check what's wrong
+    print_BWdata(bw); // to check what's wrong
 
-    func(bw); // run experiment
+    size_t nb_iter = func(bw); // run experiment
+    printf("\nThe experiment took %zu iterations until convergence.\n\n", nb_iter);
 
     // checks only conceptual stuff;
     // e.g. whether probabilities work out (sum to 1)
@@ -205,7 +206,7 @@ bool test_case_0(compute_bw_func func) {
         PRINT_PASSED("emit_prob[1][1] passed!");
     }
 
-    //print_BWdata(bw); // to check what's wrong
+    print_BWdata(bw); // to check what's wrong
 
     clean_BWdata(bw);
 
