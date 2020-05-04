@@ -59,7 +59,9 @@ inline const BWdata& initialize_BWdata(
     const size_t max_iterations
     ) {
 
-    /*
+    /* NOTE:
+    the wikipedia test case example in verifications.cpp needs values smaller than 4 for K, N and M
+
     if (K < 4 || K % 4 != 0) {
         printf("\x1b[1;31mVIOLATION:\x1b[0m K is %zu, but must be >= 4 and divisible by 4\n", K);
         exit(1);
