@@ -226,6 +226,7 @@ inline void compute_gamma(const BWdata& bw) {
         // Init
         double g_sum, s_sum;
 
+        // TODO: Loop switch+blocking if N << T or vice versa i don't know
         for (size_t n0 = 0; n0 < bw.N; n0++) {
             // Init
             g_sum = bw.ggamma[(k*bw.T + 0)*bw.N + n0];
@@ -238,6 +239,7 @@ inline void compute_gamma(const BWdata& bw) {
             // Store
             bw.gamma_sum[k*bw.N + n0] = g_sum;
 
+            // TODO: Loop switch+blocking if N << T or vice versa i don't know
             for (size_t n1 = 0; n1 < bw.N; n1++) {
                 // Init
                 s_sum = bw.sigma[((k*bw.T + 0)*bw.N + n0) * bw.N + n1];
