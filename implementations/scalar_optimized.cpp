@@ -78,7 +78,7 @@ inline void forward_step(const BWdata& bw) {
 
     size_t kTN, kT, n1_n11;
 
-    size_t n01, n02, n03;
+    size_t n01, n02, n03, n0_n00, n_n0;
 
     for (size_t k = 0; k < bw.K; k++) {
         // t = 0, base case
@@ -88,17 +88,22 @@ inline void forward_step(const BWdata& bw) {
         size_t observations = bw.observations[k*bw.T];
         kT = k*bw.T;
 
-        for (size_t n = 0; n < bw.N; n++) {
-            // Load
-            init_prob = bw.init_prob[n];
-            emit_prob = bw.emit_prob[n*bw.M + observations];
+        for (size_t n = 0; n < bw.N; n+=4){
 
-            // Calculate
-            alpha = init_prob * emit_prob;
-            c_norm += alpha;
+            for (size_t n0 = 0; n0 < 4; n0++){
+                n_n0 = n + n0;
 
-            // Store
-            bw.alpha[k*bw.T*bw.N + n] = alpha;
+                // Load
+                init_prob = bw.init_prob[n_n0];
+                emit_prob = bw.emit_prob[n_n0*bw.M + observations];
+
+                // Calculate
+                alpha = init_prob * emit_prob;
+                c_norm += alpha;
+
+                // Store
+                bw.alpha[k*bw.T*bw.N + n_n0] = alpha;
+            }
         }
 
         // Calculate
@@ -107,15 +112,20 @@ inline void forward_step(const BWdata& bw) {
         //Init
         kTN = k*bw.T*bw.N;
 
-        for (size_t n = 0; n < bw.N; n++){
-            // Load
-            alpha = bw.alpha[kTN + n];
+        for (size_t n = 0; n < bw.N; n+=4){
 
-            // Calculate
-            alpha *= c_norm;
+            for (size_t n0 = 0; n0 < 4; n0++){
+                n_n0 = n + n0;
 
-            // Store
-            bw.alpha[kTN + n] = alpha;
+                // Load
+                alpha = bw.alpha[kTN + n_n0];
+
+                // Calculate
+                alpha *= c_norm;
+
+                // Store
+                bw.alpha[kTN + n_n0] = alpha;
+            }
         }
 
         // Store
@@ -179,15 +189,20 @@ inline void forward_step(const BWdata& bw) {
             // Calculate
             c_norm = 1.0/c_norm;
 
-            for (size_t n0 = 0; n0 < bw.N; n0++) {
-                // Load
-                alpha = bw.alpha[kTN + n0];
+            for (size_t n0 = 0; n0 < bw.N; n0+=4) {
 
-                // Calculate
-                alpha *= c_norm;
+                for (size_t n00 = 0 ; n00 < 4; n00++){
+                    n0_n00 = n0 + n00;
 
-                // Store
-                bw.alpha[kTN + n0] = alpha;
+                    // Load
+                    alpha = bw.alpha[kTN + n0_n00];
+
+                    // Calculate
+                    alpha *= c_norm;
+
+                    // Store
+                    bw.alpha[kTN + n0_n00] = alpha;
+                }
             }
 
             // Store
@@ -205,7 +220,7 @@ inline void backward_step(const BWdata& bw) {
     double alpha3, beta_sum3, trans_prob3;
     double alpha4, beta_sum4, trans_prob4;
 
-    size_t observations, kTN, kTNN, kT, nN, n1_n10;
+    size_t observations, kTN, kTNN, kT, nN, n1_n10, n_n0;
     size_t kTNN2, nN2;
     size_t kTNN3, nN3;
     size_t kTNN4, nN4;
@@ -218,13 +233,19 @@ inline void backward_step(const BWdata& bw) {
 
         // Load
         c_norm = bw.c_norm[k*bw.T + (bw.T-1)];
-        for (size_t n = 0; n < bw.N; n++) {
-            // Load
-            alpha = bw.alpha[kTN + n];
+        for (size_t n = 0; n < bw.N; n+=4) {
 
-            // Store
-            bw.beta[kTN + n] = c_norm;
-            bw.ggamma[kTN + n] = alpha;
+            for (size_t n0 = 0; n0 < 4; n0++){
+                n_n0 = n + n0;
+
+                // Load
+                alpha = bw.alpha[kTN + n_n0];
+
+                // Store
+                bw.beta[kTN + n_n0] = c_norm;
+                bw.ggamma[kTN + n_n0] = alpha;
+            }
+
         }
 
         // Recursion step
