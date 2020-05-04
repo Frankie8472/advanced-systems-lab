@@ -412,19 +412,39 @@ inline void compute_sigma(const BWdata& bw) {
 
 inline void update_init_prob(const BWdata& bw) {
     // Init
-    double g0_sum;
+    double g0_sum, g0_sum2, g0_sum3, g0_sum4;
 
-    for (size_t n = 0; n < bw.N; n++) {
+    size_t n1, n2, n3, k_k0;
+
+    for (size_t n = 0; n < bw.N; n+=4) {
+        n1 = n + 1;
+        n2 = n + 2;
+        n3 = n + 3;
+
         // Init
         g0_sum = 0.0;
+        g0_sum2 = 0.0;
+        g0_sum3 = 0.0;
+        g0_sum4 = 0.0;
 
-        for (size_t k = 0; k < bw.K; k++) {
-            // Calculate
-            g0_sum += bw.ggamma[k*bw.T*bw.N + n];
+        for (size_t k = 0; k < bw.K; k+=4) {
+
+            for (size_t k0 = 0; k0 < 4; k0++){
+                k_k0 = k + k0;
+
+                // Calculate
+                g0_sum += bw.ggamma[k_k0*bw.T*bw.N + n];
+                g0_sum2 += bw.ggamma[k_k0*bw.T*bw.N + n1];
+                g0_sum3 += bw.ggamma[k_k0*bw.T*bw.N + n2];
+                g0_sum4 += bw.ggamma[k_k0*bw.T*bw.N + n3];
+            }
         }
 
         //Store
         bw.init_prob[n] = g0_sum/bw.K;
+        bw.init_prob[n1] = g0_sum2/bw.K;
+        bw.init_prob[n2] = g0_sum3/bw.K;
+        bw.init_prob[n3] = g0_sum4/bw.K;
     }
 }
 
@@ -432,23 +452,51 @@ inline void update_init_prob(const BWdata& bw) {
 inline void update_trans_prob(const BWdata& bw) {
     //Init
     double numerator_sum, denominator_sum;
-    size_t nN;
+    double numerator_sum2;
+    double numerator_sum3;
+    double numerator_sum4;
+
+    size_t nN, k_k0;
+
+    size_t n11, n12, n13;
 
     for (size_t n0 = 0; n0 < bw.N; n0++) {
         nN = n0*bw.N;
-        for (size_t n1 = 0; n1 < bw.N; n1++) {
+
+        for (size_t n1 = 0; n1 < bw.N; n1+=4) {
+            n11 = n1 + 1;
+            n12 = n1 + 2;
+            n13 = n1 + 3;
+
             // Init
             numerator_sum = 0.0;
+            numerator_sum2 = 0.0;
+            numerator_sum3 = 0.0;
+            numerator_sum4 = 0.0;
+
             denominator_sum = 0.0;
 
-            for (size_t k = 0; k < bw.K; k++) {
-                // Calculate
-                numerator_sum += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1];
-                denominator_sum += bw.gamma_sum[k*bw.N + n0];
+
+            for (size_t k = 0; k < bw.K; k+=4) {
+
+                for (size_t k0 = 0; k0 < 4; k0++){
+                    k_k0 = k + k0;
+
+                    // Calculate
+                    numerator_sum += bw.sigma_sum[(k_k0*bw.N + n0)*bw.N + n1];
+                    numerator_sum2 += bw.sigma_sum[(k_k0*bw.N + n0)*bw.N + n11];
+                    numerator_sum3 += bw.sigma_sum[(k_k0*bw.N + n0)*bw.N + n12];
+                    numerator_sum4 += bw.sigma_sum[(k_k0*bw.N + n0)*bw.N + n13];
+
+                    denominator_sum += bw.gamma_sum[k_k0*bw.N + n0];
+                }
             }
 
             // Store
             bw.trans_prob[nN + n1] = numerator_sum / denominator_sum;
+            bw.trans_prob[nN + n11] = numerator_sum2 / denominator_sum;
+            bw.trans_prob[nN + n12] = numerator_sum3 / denominator_sum;
+            bw.trans_prob[nN + n13] = numerator_sum4 / denominator_sum;
         }
     }
 }
@@ -458,13 +506,39 @@ inline void update_emit_prob(const BWdata& bw) {
     // Init
     double numerator_sum, denominator_sum, ggamma_cond_sum;
     size_t kTN, kN;
+    size_t kTN2, kN2;
+    size_t kTN3, kN3;
+    size_t kTN4, kN4;
+
+    size_t n_n0;
+    size_t k1, k2, k3;
 
     // add last bw.T-step to bw.gamma_sum
-    for (size_t k = 0; k < bw.K; k++) {
+    for (size_t k = 0; k < bw.K; k+=4) {
+        k1 = k + 1;
+        k2 = k + 2;
+        k3 = k + 3;
+
         kTN = (k*bw.T + (bw.T-1))*bw.N;
+        kTN2 = (k1*bw.T + (bw.T-1))*bw.N;
+        kTN3 = (k2*bw.T + (bw.T-1))*bw.N;
+        kTN4 = (k3*bw.T + (bw.T-1))*bw.N;
+
         kN = k*bw.N;
-        for (size_t n = 0; n < bw.N; n++) {
-            bw.gamma_sum[kN + n] += bw.ggamma[kTN + n];
+        kN2 = k1*bw.N;
+        kN3 = k2*bw.N;
+        kN4 = k3*bw.N;
+
+        for (size_t n = 0; n < bw.N; n+=4) {
+
+            for (size_t n0 = 0; n0 < 4; n0++){
+                n_n0 = n + n0;
+
+                bw.gamma_sum[kN + n_n0] += bw.ggamma[kTN + n_n0];
+                bw.gamma_sum[kN2 + n_n0] += bw.ggamma[kTN2 + n_n0];
+                bw.gamma_sum[kN3 + n_n0] += bw.ggamma[kTN3 + n_n0];
+                bw.gamma_sum[kN4 + n_n0] += bw.ggamma[kTN4 + n_n0];
+            }
         }
     }
     // update bw.emit_prob
