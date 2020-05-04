@@ -60,7 +60,7 @@ void perf_test(compute_bw_func func,
     
     // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)    
     const BWdata& bw = initialize_BWdata(K, N, M, T, max_iterations);
-    initialize_uar(bw);
+    
 
     double cycles = 0.;
     size_t num_runs = 100;
@@ -74,7 +74,7 @@ void perf_test(compute_bw_func func,
     // This helps excluding timing overhead when measuring small runtimes.
     do {
         num_runs = num_runs * multiplier;
-
+        initialize_uar(bw);
         start = start_tsc();
         for (size_t i = 0; i < num_runs; i++) {
             func(bw);
@@ -92,7 +92,7 @@ void perf_test(compute_bw_func func,
     size_t iter = 0;
     size_t total_iter = 0;
     for (size_t j = 0; j < REP; j++) {
-
+        initialize_uar(bw);
         start = start_tsc();
         for (size_t i = 0; i < num_runs; ++i) {
             iter += func(bw);
