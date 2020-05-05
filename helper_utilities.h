@@ -682,5 +682,10 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
 }
 
 
+inline void print_BWdata_debug_helper(const BWdata& bw, const size_t iteration_variable, const char* message) {
+    printf("\n\x1b[1;33m[i = %zu] %s\x1b[0m", iteration_variable, message);
+    print_BWdata(bw);
+}
+
 
 #endif /* __BW_HELPER_UTILITIES_H */
