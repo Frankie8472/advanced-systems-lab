@@ -172,6 +172,8 @@ int main(int argc, char **argv) {
     
     const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);
+    printf("Running: %s\n", FuncRegister::baseline_name.c_str());
+    perf_test(FuncRegister::baseline_func, bw);
     for(size_t i = 0; i < FuncRegister::size(); i++){
         printf("Running: %s\n", FuncRegister::func_names->at(i).c_str());
         perf_test(FuncRegister::user_funcs->at(i), bw);

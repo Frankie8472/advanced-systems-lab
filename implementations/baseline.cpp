@@ -52,7 +52,7 @@ void update_emit_prob(const BWdata& bw);
 size_t comp_bw(const BWdata& bw);
 
 
-REGISTER_FUNCTION(comp_bw, "Baseline");
+SET_BASELINE(comp_bw, "Baseline");
 
 
 size_t comp_bw(const BWdata& bw){

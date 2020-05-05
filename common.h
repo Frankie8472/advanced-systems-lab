@@ -284,6 +284,9 @@ typedef size_t(*compute_bw_func)(const BWdata& bw);
 class FuncRegister
 {
 public:
+
+    static void set_baseline(compute_bw_func f, std::string name);
+
     static void add_function(compute_bw_func f, std::string name);
     
     static void printRegisteredFuncs()
@@ -300,6 +303,8 @@ public:
     
     static std::vector<compute_bw_func> *user_funcs;
     static std::vector<std::string> *func_names;
+    static compute_bw_func baseline_func;
+    static std::string baseline_name;
 };
 
 // Macro to register a function and a name that should be executed
@@ -309,6 +314,16 @@ public:
         f##_()                                                    \
         {                                                         \
             FuncRegister::add_function(f, name);                  \
+        }                                                         \
+    } f##__BW_;
+
+// Macro to register a function and a name that should be executed
+#define SET_BASELINE(f, name)                                \
+    static struct f##_                                            \
+    {                                                             \
+        f##_()                                                    \
+        {                                                         \
+            FuncRegister::set_baseline(f, name);                  \
         }                                                         \
     } f##__BW_;
 
