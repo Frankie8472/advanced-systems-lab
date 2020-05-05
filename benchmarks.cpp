@@ -85,7 +85,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
         cycles = (double)end;
         multiplier = (CYCLES_REQUIRED) / (cycles);
 
-    } while (multiplier > 2);
+    } while (multiplier > 2 || num_runs == 1);
 
 #endif
     // Actual performance measurements repeated REP times.
