@@ -31,12 +31,13 @@ void update_emit_prob(const BWdata& bw);
 size_t comp_bw_scalar_reorder(const BWdata& bw);
 
 
-REGISTER_FUNCTION(comp_bw_scalar_reorder, "Scalar Optimized: reordered calculations");
+REGISTER_FUNCTION(comp_bw_scalar_reorder, "Scalar Optimized: reorder calculations");
 
 
 size_t comp_bw_scalar_reorder(const BWdata& bw){
 
     size_t iter = 0;
+    double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
     for (size_t i = 0; i < bw.max_iterations; i++) {
         iter++;
 
@@ -49,8 +50,6 @@ size_t comp_bw_scalar_reorder(const BWdata& bw){
         update_emit_prob(bw);
 
         double neg_log_likelihood_sum = 0.0;
-        double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
-
         for (size_t k = 0; k < bw.K; k++) {
             for (size_t t = 0; t < bw.T; t++) {
                 neg_log_likelihood_sum = neg_log_likelihood_sum - log(bw.c_norm[k*bw.T + t]);
@@ -59,9 +58,10 @@ size_t comp_bw_scalar_reorder(const BWdata& bw){
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         // convergence criterion
-        if (i > 0 && std::abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-3) break;
+        if (i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum) < 1e-3) break;
 
         neg_log_likelihood_sum_old = neg_log_likelihood_sum;
+
         //print_states(bw);
     }
 
@@ -79,9 +79,11 @@ inline void forward_step(const BWdata& bw) {
         // t = 0, base case
 
         // Init
-        c_norm = 0;;
-        size_t observations = bw.observations[k*bw.T];
+        c_norm = 0;
         kT = k*bw.T;
+        kTN = kT*bw.N;
+        size_t observations = bw.observations[kT];
+
 
         for (size_t n = 0; n < bw.N; n++){
             // Load
@@ -93,14 +95,12 @@ inline void forward_step(const BWdata& bw) {
             c_norm += alpha;
 
             // Store
-            bw.alpha[kT*bw.N + n] = alpha;
+            bw.alpha[kTN + n] = alpha;
         }
 
         // Calculate
         c_norm = 1.0/c_norm;
 
-        //Init
-        kTN = k*bw.T*bw.N;
 
         for (size_t n = 0; n < bw.N; n++){
             // Load
@@ -114,12 +114,12 @@ inline void forward_step(const BWdata& bw) {
         }
 
         // Store
-        bw.c_norm[k*bw.T] = c_norm;
+        bw.c_norm[kT] = c_norm;
 
         // recursion step
         for (size_t t = 1; t < bw.T; t++) {
             c_norm = 0;
-            observations = bw.observations[k*bw.T + t];
+            observations = bw.observations[kT + t];
             kTN = (kT + t)*bw.N;
 
             for (size_t n0 = 0; n0 < bw.N; n0++) {
@@ -162,7 +162,7 @@ inline void forward_step(const BWdata& bw) {
             }
 
             // Store
-            bw.c_norm[k*bw.T + t] = c_norm;
+            bw.c_norm[kT + t] = c_norm;
         }
 
     }
