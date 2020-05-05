@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <tuple>
 #include <random>
 #include <time.h>
 #include <unistd.h>
@@ -24,53 +25,168 @@
 #include "helper_utilities.h"
 #include "common.h"
 
-//bool test_case_0(compute_bw_func func);
+void check_baseline(void);
+void check_user_functions(const size_t nb_random_tests);
+bool test_case_0(compute_bw_func func);
 bool test_case_1(compute_bw_func func);
 bool test_case_2(compute_bw_func func);
 bool test_case_randomized(compute_bw_func func);
 
-
 int main() {
+    // maybe add commandline arguments, dunno
+    if ( true ) check_baseline();
+    const size_t nb_random_tests = 5;
+    if ( true ) check_user_functions(nb_random_tests);
+}
 
-    std::vector<bool> testResults;
 
-    for(size_t f = 0; f < FuncRegister::size(); f++) {
-        // randomize seed (new for each)
-        srand(time(NULL));
-        size_t tn = rand();
-        bool success = true;
-        printf("\x1b[1m\n----------------------------------\x1b[0m\n");
-        printf("\x1b[1mTesting: %s\x1b[0m\n", FuncRegister::func_names->at(f).c_str());
-        printf("\x1b[1m----------------------------------\x1b[0m\n");
-        //printf("\nTest Case Custom 0 with srand(%zu)\n", tn);
-        //success = test_case_0(FuncRegister::user_funcs->at(f)) && success;
-        printf("\nTest Case Custom 1 with srand(%zu)\n", tn);
-        success = test_case_1(FuncRegister::user_funcs->at(f)) && success;
-        printf("\nTest Case Custom 2 with srand(%zu)\n", tn);
-        success = test_case_2(FuncRegister::user_funcs->at(f)) && success;
-        size_t iters = 10;
-        for (size_t i = 0; i < iters; i++) {
-            size_t tn = rand();
-            printf("Test Case Randomized %zu with srand(%zu)\n", i, tn);
-            success = test_case_randomized(FuncRegister::user_funcs->at(f)) && success;
+inline void check_baseline(void) {
+
+    const size_t baseline_random_seed = time(NULL);
+    srand(baseline_random_seed);
+    const size_t baseline_random_number = rand();
+
+    // hardcoded test cases to check correctness of the baseline implementation
+    printf("\x1b[1m\n-------------------------------------------------------------------------------\x1b[0m\n");
+    printf("\x1b[1mBaseline Verifications with Baseline Random Number [%zu]\x1b[0m\n", baseline_random_number);
+    printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
+    const bool success_test_case_0 = test_case_0(FuncRegister::baseline_func);
+    const bool success_test_case_1 = test_case_1(FuncRegister::baseline_func);
+    const bool success_test_case_2 = test_case_2(FuncRegister::baseline_func);
+    if ( success_test_case_0 ) {
+        printf("\x1b[1;32m[SUCCEEDED]:\x1b[0m Baseline Test Case Custom 0\n");
+    } else {
+        printf("\n\x1b[1;31m[FAILED]:\x1b[0m Baseline Test Case Custom 0\n");
+    }
+    if ( success_test_case_1 ) {
+        printf("\n\x1b[1;32m[SUCCEEDED]:\x1b[0m Baseline Test Case Custom 1\n");
+    } else {
+        printf("\n\x1b[1;31m[FAILED]:\x1b[0m Baseline Test Case Custom 1\n");
+    }
+    if ( success_test_case_2 ) {
+        printf("\n\x1b[1;32m[SUCCEEDED]:\x1b[0m Baseline Test Case Custom 2\n");
+    } else {
+        printf("\n\x1b[1;31m[FAILED]:\x1b[0m Baseline Test Case Custom 2\n");
+    }
+    printf("-------------------------------------------------------------------------------\n");
+}
+
+
+inline void check_user_functions(const size_t nb_random_tests) {
+
+    const size_t nb_user_functions = FuncRegister::size();
+    bool test_results[nb_user_functions][nb_random_tests];
+
+    // check optimizations w.r.t. the baseline using randomized tests
+    // NOTE : this assumes that the Baseline is 100% correctly implemented (which it isn't as of yet uwu)
+    for (size_t i = 0; i < nb_random_tests; i++) {
+
+        // randomize seed (new for each random test case)
+        const size_t baseline_random_seed = time(NULL)*i;
+        srand(baseline_random_seed);
+        size_t baseline_random_number = rand();
+
+        // initialize data for random test case i
+        // NOTE
+        // we assume sufficiently high (>= 16) values
+        // NOTE
+        // we assume divisibility of (16)
+        const size_t K = (rand() % 2)*16 + 16;
+        const size_t N = (rand() % 3)*16 + 16;
+        const size_t M = (rand() % 3)*16 + 16;
+        const size_t T = (rand() % 2)*16 + 16;
+        const size_t max_iterations = 1000;
+
+        // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
+        const BWdata& bw_baseline_initialized = create_BWdata(K, N, M, T, max_iterations);
+        //initialize_uar(bw_baseline_initialized);
+        initialize_random(bw_baseline_initialized);
+        const BWdata& bw_baseline = full_copy_BWdata(bw_baseline_initialized);
+
+        // run baseline and don't touch the bw_baseline data:
+        // each of the users function bw_user_function data in
+        // the loop below will be checked against bw_baseline data!
+        printf("\x1b[1m\n-------------------------------------------------------------------------------\x1b[0m\n");
+        printf("\x1b[1mTest Case Randomized [%zu] with Baseline Random Number [%zu]\x1b[0m\n", i, baseline_random_number);
+        printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
+        printf("Initialized: K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
+        printf("-------------------------------------------------------------------------------\n");
+        printf("Running \x1b[1m'Baseline'\x1b[0m\n");
+        printf("-------------------------------------------------------------------------------\n");
+        const size_t baseline_convergence = FuncRegister::baseline_func(bw_baseline);
+        printf("It took \x1b[1m[%zu] iterations\x1b[0m to converge\n", baseline_convergence);
+        printf("-------------------------------------------------------------------------------\n");
+        const bool baseline_sucess = check_and_verify(bw_baseline);
+        printf("-------------------------------------------------------------------------------\n");
+
+        // run all user functions and compare against the data
+        for(size_t f = 0; f < nb_user_functions; f++) {
+
+            printf("Running User Function \x1b[1m'%s'\x1b[0m\n", FuncRegister::func_names->at(f).c_str());
+            printf("-------------------------------------------------------------------------------\n");
+            const BWdata& bw_user_function = full_copy_BWdata(bw_baseline_initialized);
+            const size_t user_function_convergence = FuncRegister::user_funcs->at(f)(bw_user_function);
+            printf("It took \x1b[1m[%zu] iterations\x1b[0m to converge\n", user_function_convergence);
+            printf("-------------------------------------------------------------------------------\n");
+            const bool user_function_sucess = check_and_verify(bw_user_function);
+            printf("-------------------------------------------------------------------------------\n");
+            const bool is_bw_baseline_equal_bw_user_function = is_BWdata_equal(bw_baseline, bw_user_function);
+            //const bool is_bw_baseline_equal_bw_user_function = is_BWdata_equal_only_probabilities(bw_baseline, bw_user_function);
+            printf("-------------------------------------------------------------------------------\n");
+            //const bool is_bw_baseline_equal_bw_user_function = is_BWdata_equal_only_probabilities(bw_baseline, bw_user_function);
+
+            // Okay, hear me out!
+            // If baseline is correct, then that's dope and we wanna have user function also correct, right?
+            // Though, if baseline is wrong, then user function being true might be some potential bug-problem!
+            // NOTE 1
+            // This only concerns the "check_and_verify" function; which checks e.g. whether probabilities sum to 1.
+            // However, the functional correctness may still be wrong, but that wouldn't be the fault of the user_function.
+            // The only job of the user_function is to match the baseline; the baseline itself has to be correct!
+            // NOTE 2
+            // Checking the convergence rate of the Baseline with the User Function may or may not be a good idea
+            // U may change (false -> true), but no big h8sies pls uwu
+            test_results[f][i] = (
+                   ( false || is_bw_baseline_equal_bw_user_function )
+                && ( false || user_function_sucess )
+                && ( true || ( user_function_convergence == baseline_convergence ) )
+                && ( false || ( user_function_sucess == baseline_sucess ) )
+            );
+
+            clean_BWdata(bw_user_function);
         }
-        testResults.push_back(success);
+
+        clean_BWdata(bw_baseline);
+        clean_BWdata(bw_baseline_initialized);
     }
 
     printf("\nAll Tests Done!\n\n");
-
     printf("Results:\n");
-    printf("----------------------------------\n");
-    for(size_t i = 0; i < testResults.size(); i++) {
-        if(testResults.at(i)){
-            printf("\x1b[1;32mSUCCEED:\x1b[0m '%s'\n", FuncRegister::func_names->at(i).c_str());
+    printf("-------------------------------------------------------------------------------\n");
+    for (size_t f = 0; f < nb_user_functions; f++) {
+
+        size_t nb_fails = 0;
+        for (size_t i = 0; i < nb_random_tests; i++) {
+            if (test_results[f][i] == false) nb_fails++;
+        }
+
+        printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
+        if(nb_fails == 0){
+            printf("\x1b[1;32mALL CASES PASSED:\x1b[0m '%s'\n", FuncRegister::func_names->at(f).c_str());
         } else {
-            printf("\x1b[1;31mFAIL:\x1b[0m    '%s' \n", FuncRegister::func_names->at(i).c_str());
+            printf("\x1b[1;31m[%zu/%zu] CASES FAILED:\x1b[0m    '%s' \n", nb_fails, nb_random_tests, FuncRegister::func_names->at(f).c_str());
+        }
+        printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
+        for (size_t i = 0; i < nb_random_tests; i++) {
+            if(test_results[f][i]){
+                printf("\x1b[1;32mPASSED\x1b[0m Test Case Randomized [%zu]\n", i);
+            } else {
+                printf("\x1b[1;31mFAILED:\x1b[0m Test Case Randomized [%zu]\n", i);
+            }
         }
     }
-    printf("----------------------------------\n");
-
+    printf("-------------------------------------------------------------------------------\n");
 }
+
 
 /**
  * Description
@@ -116,10 +232,11 @@ bool test_case_0(compute_bw_func func) {
     bw.emit_prob[1*M + 0] = 0.8;
     bw.emit_prob[1*M + 1] = 0.2;
 
-    print_BWdata(bw); // to check what's wrong
+    //print_BWdata(bw); // to check what's wrong
 
-    size_t nb_iter = func(bw); // run experiment
-    printf("\nThe experiment took %zu iterations until convergence.\n\n", nb_iter);
+    func(bw);
+    //size_t nb_iter = func(bw); // run experiment
+    //printf("\ntest_case_0 took %zu iterations until convergence.\n\n", nb_iter);
 
     // checks only conceptual stuff;
     // e.g. whether probabilities work out (sum to 1)
@@ -205,7 +322,7 @@ bool test_case_0(compute_bw_func func) {
         PRINT_VIOLATION("In Wikipedia Testcase", errors);
     }
 
-    print_BWdata(bw); // to check what's wrong
+    //print_BWdata(bw); // to check what's wrong
 
     clean_BWdata(bw);
 
@@ -278,30 +395,7 @@ bool test_case_2(compute_bw_func func) {
     printf("\nInitialized: K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
     func(bw);
     bool success = check_and_verify(bw);
-    print_states(bw);
-
-    clean_BWdata(bw);
-
-    return success;
-}
-
-
-bool test_case_randomized(compute_bw_func func) {
-
-    const size_t K = (rand() % 8)*4 + 4;
-    const size_t N = (rand() % 9)*4 + 4;
-    const size_t M = (rand() % 9)*4 + 4;
-    const size_t T = (rand() % 14)*4 + 4;
-    const size_t max_iterations = 500;
-
-    // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-
-
-    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
-    initialize_random(bw);
-    printf("\nInitialized: K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
-    func(bw);
-    bool success = check_and_verify(bw);
+    //print_states(bw);
 
     clean_BWdata(bw);
 
