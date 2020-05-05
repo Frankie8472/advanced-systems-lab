@@ -281,10 +281,17 @@ inline void clean_BWdata(const BWdata& bw){
  */
 typedef size_t(*compute_bw_func)(const BWdata& bw);
 
+/**
+ * Static class that handles the function registration. 
+ */
 class FuncRegister
 {
 public:
 
+    /**
+     * Set the function that is considererd the baseline and other 
+     * implementations are compared against. There can only be one baseline
+     */
     static void set_baseline(compute_bw_func f, std::string name);
 
     static void add_function(compute_bw_func f, std::string name);
