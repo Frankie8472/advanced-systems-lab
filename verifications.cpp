@@ -24,7 +24,7 @@
 #include "helper_utilities.h"
 #include "common.h"
 
-bool test_case_0(compute_bw_func func);
+//bool test_case_0(compute_bw_func func);
 bool test_case_1(compute_bw_func func);
 bool test_case_2(compute_bw_func func);
 bool test_case_randomized(compute_bw_func func);
@@ -42,18 +42,18 @@ int main() {
         printf("\x1b[1m\n----------------------------------\x1b[0m\n");
         printf("\x1b[1mTesting: %s\x1b[0m\n", FuncRegister::func_names->at(f).c_str());
         printf("\x1b[1m----------------------------------\x1b[0m\n");
-        printf("\nTest Case Custom 0 with srand(%zu)\n", tn);
-        success = test_case_0(FuncRegister::user_funcs->at(f)) && success;
-        //printf("\nTest Case Custom 1 with srand(%zu)\n", tn);
-        //success = test_case_1(FuncRegister::user_funcs->at(f)) && success;
-        //printf("\nTest Case Custom 2 with srand(%zu)\n", tn);
-        //success = test_case_2(FuncRegister::user_funcs->at(f)) && success;
-        //size_t iters = 10;
-        //for (size_t i = 0; i < iters; i++) {
-        //    size_t tn = rand();
-        //    printf("Test Case Randomized %zu with srand(%zu)\n", i, tn);
-        //    success = test_case_randomized(FuncRegister::user_funcs->at(f)) && success;
-        //}
+        //printf("\nTest Case Custom 0 with srand(%zu)\n", tn);
+        //success = test_case_0(FuncRegister::user_funcs->at(f)) && success;
+        printf("\nTest Case Custom 1 with srand(%zu)\n", tn);
+        success = test_case_1(FuncRegister::user_funcs->at(f)) && success;
+        printf("\nTest Case Custom 2 with srand(%zu)\n", tn);
+        success = test_case_2(FuncRegister::user_funcs->at(f)) && success;
+        size_t iters = 10;
+        for (size_t i = 0; i < iters; i++) {
+            size_t tn = rand();
+            printf("Test Case Randomized %zu with srand(%zu)\n", i, tn);
+            success = test_case_randomized(FuncRegister::user_funcs->at(f)) && success;
+        }
         testResults.push_back(success);
     }
 

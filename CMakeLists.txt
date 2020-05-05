@@ -9,7 +9,9 @@ add_executable(verification
     verifications.cpp
     implementations/baseline.cpp
     implementations/reordered_algorithm.cpp
-    implementations/scalar_optimized.cpp
+    implementations/scalar_optimized_playground.cpp
+    implementations/scalar_optimized_reorder.cpp
+    implementations/scalar_optimized_blocking.cpp
     implementations/vector_optimized.cpp
     implementations/combined_optimized.cpp
 )
@@ -19,7 +21,9 @@ add_executable(benchmarks
     benchmarks.cpp
     implementations/baseline.cpp
     implementations/reordered_algorithm.cpp
-    implementations/scalar_optimized.cpp
+    implementations/scalar_optimized_playground.cpp
+    implementations/scalar_optimized_reorder.cpp
+    implementations/scalar_optimized_blocking.cpp
     implementations/vector_optimized.cpp
     implementations/combined_optimized.cpp
 )
