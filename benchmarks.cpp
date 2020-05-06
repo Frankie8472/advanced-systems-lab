@@ -85,11 +85,14 @@ void perf_test(compute_bw_func func, const BWdata& bw){
         cycles = (double)end;
         multiplier = (CYCLES_REQUIRED) / (cycles);
 
-    } while (multiplier > 2 || num_runs == 1);
+    } while (multiplier > 2);
 
 #endif
     // Actual performance measurements repeated REP times.
     printf("num_runs: %zu\n", num_runs);
+    if (num_runs == 1){
+        printf("\x1b[1;36mWarning:\x1b[0m Weird case is happening...\n");
+    }
     double total_cycles = 0;
     size_t iter = 0;
     size_t total_iter = 0;
@@ -128,7 +131,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
 
     printf("Iterations: %ld\n", iter);
     printf("Cycles: %f\n", round(cycles));
-    printf("Performance: %f\n\n", perf);
+    printf("Performance: %f\n", perf);
 
     /*
     printf("\n");
@@ -172,10 +175,10 @@ int main(int argc, char **argv) {
     
     const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);
-    printf("Running: %s\n", FuncRegister::baseline_name.c_str());
+    printf("\nRunning: %s\n", FuncRegister::baseline_name.c_str());
     perf_test(FuncRegister::baseline_func, bw);
     for(size_t i = 0; i < FuncRegister::size(); i++){
-        printf("Running: %s\n", FuncRegister::func_names->at(i).c_str());
+        printf("\nRunning: %s\n", FuncRegister::func_names->at(i).c_str());
         perf_test(FuncRegister::user_funcs->at(i), bw);
     }
     clean_BWdata(bw);
