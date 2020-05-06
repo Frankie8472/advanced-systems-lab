@@ -30,6 +30,9 @@ void update_trans_prob(const BWdata& bw);
 void update_emit_prob(const BWdata& bw);
 size_t comp_bw_scalar_blocking(const BWdata& bw);
 
+//variable for the innermost block size
+size_t innermost_block_size = 4;
+
 
 REGISTER_FUNCTION(comp_bw_scalar_blocking, "Scalar Optimized: Blocking");
 
@@ -89,9 +92,9 @@ inline void forward_step(const BWdata& bw) {
         kTN = kT*bw.N;
         size_t observations = bw.observations[kT];
 
-        for (size_t n = 0; n < bw.N; n+=4){
+        for (size_t n = 0; n < bw.N; n+=innermost_block_size){
 
-            for (size_t n0 = 0; n0 < 4; n0++){
+            for (size_t n0 = 0; n0 < innermost_block_size; n0++){
                 n_n0 = n + n0;
 
                 // Load
@@ -110,9 +113,9 @@ inline void forward_step(const BWdata& bw) {
         // Calculate
         c_norm = 1.0/c_norm;
 
-        for (size_t n = 0; n < bw.N; n+=4){
+        for (size_t n = 0; n < bw.N; n+=innermost_block_size){
 
-            for (size_t n0 = 0; n0 < 4; n0++){
+            for (size_t n0 = 0; n0 < innermost_block_size; n0++){
                 n_n0 = n + n0;
 
                 // Load
@@ -150,9 +153,9 @@ inline void forward_step(const BWdata& bw) {
                 emit_prob3 = bw.emit_prob[n02*bw.M + observations];
                 emit_prob4 = bw.emit_prob[n03*bw.M + observations];
 
-                for (size_t n1 = 0; n1 < bw.N; n1+=4) {
+                for (size_t n1 = 0; n1 < bw.N; n1+=innermost_block_size) {
 
-                    for (size_t n11 = 0; n11 < 4; n11++){
+                    for (size_t n11 = 0; n11 < innermost_block_size; n11++){
                         n1_n11 = n1 + n11;
 
                         // Load
@@ -187,9 +190,9 @@ inline void forward_step(const BWdata& bw) {
             // Calculate
             c_norm = 1.0/c_norm;
 
-            for (size_t n0 = 0; n0 < bw.N; n0+=4) {
+            for (size_t n0 = 0; n0 < bw.N; n0+=innermost_block_size) {
 
-                for (size_t n00 = 0 ; n00 < 4; n00++){
+                for (size_t n00 = 0 ; n00 < innermost_block_size; n00++){
                     n0_n00 = n0 + n00;
 
                     // Load
@@ -231,9 +234,9 @@ inline void backward_step(const BWdata& bw) {
 
         // Load
         c_norm = bw.c_norm[k*bw.T + (bw.T-1)];
-        for (size_t n = 0; n < bw.N; n+=4) {
+        for (size_t n = 0; n < bw.N; n+=innermost_block_size) {
 
-            for (size_t n0 = 0; n0 < 4; n0++){
+            for (size_t n0 = 0; n0 < innermost_block_size; n0++){
                 n_n0 = n + n0;
 
                 // Load
@@ -277,8 +280,8 @@ inline void backward_step(const BWdata& bw) {
                 kTNN3 = (kTN + n02)*bw.N;
                 kTNN4 = (kTN + n03)*bw.N;
 
-                for (size_t n1 = 0; n1 < bw.N; n1+=4) {
-                    for (size_t n10 = 0; n10 < 4; n10++){
+                for (size_t n1 = 0; n1 < bw.N; n1+=innermost_block_size) {
+                    for (size_t n10 = 0; n10 < innermost_block_size; n10++){
                         n1_n10 = n1 + n10;
                         // Load
                         beta = bw.beta[kTN + bw.N + n1_n10];
@@ -427,9 +430,9 @@ inline void update_init_prob(const BWdata& bw) {
         g0_sum3 = 0.0;
         g0_sum4 = 0.0;
 
-        for (size_t k = 0; k < bw.K; k+=4) {
+        for (size_t k = 0; k < bw.K; k+=innermost_block_size) {
 
-            for (size_t k0 = 0; k0 < 4; k0++){
+            for (size_t k0 = 0; k0 < innermost_block_size; k0++){
                 k_k0 = k + k0;
 
                 // Calculate
@@ -477,9 +480,9 @@ inline void update_trans_prob(const BWdata& bw) {
             denominator_sum = 0.0;
 
 
-            for (size_t k = 0; k < bw.K; k+=4) {
+            for (size_t k = 0; k < bw.K; k+=innermost_block_size) {
 
-                for (size_t k0 = 0; k0 < 4; k0++){
+                for (size_t k0 = 0; k0 < innermost_block_size; k0++){
                     k_k0 = k + k0;
 
                     // Calculate
@@ -529,9 +532,9 @@ inline void update_emit_prob(const BWdata& bw) {
         kN3 = k2*bw.N;
         kN4 = k3*bw.N;
 
-        for (size_t n = 0; n < bw.N; n+=4) {
+        for (size_t n = 0; n < bw.N; n+=innermost_block_size) {
 
-            for (size_t n0 = 0; n0 < 4; n0++){
+            for (size_t n0 = 0; n0 < innermost_block_size; n0++){
                 n_n0 = n + n0;
 
                 bw.gamma_sum[kN + n_n0] += bw.ggamma[kTN + n_n0];
