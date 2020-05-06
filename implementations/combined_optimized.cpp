@@ -53,13 +53,13 @@ size_t comp_bw_combined(const BWdata& bw){
         double neg_log_likelihood_sum = 0.0;
         for (size_t k = 0; k < bw.K; k++) {
             for (size_t t = 0; t < bw.T; t++) {
-                neg_log_likelihood_sum = neg_log_likelihood_sum - log(bw.c_norm[k*bw.T + t]);
+                neg_log_likelihood_sum = neg_log_likelihood_sum + log(bw.c_norm[k*bw.T + t]);
             }
         }
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         // convergence criterion
-        if (i > 0 && abs(bw.neg_log_likelihoods[i] - bw.neg_log_likelihoods[i-1]) < 1e-3) break;
+        if (i > 0 && abs(bw.neg_log_likelihoods[i] - bw.neg_log_likelihoods[i-1]) < 1e-12) break;
 
         //print_states(bw);
     }

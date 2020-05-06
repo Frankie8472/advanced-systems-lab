@@ -52,13 +52,13 @@ size_t comp_bw_scalar_reorder(const BWdata& bw){
         double neg_log_likelihood_sum = 0.0;
         for (size_t k = 0; k < bw.K; k++) {
             for (size_t t = 0; t < bw.T; t++) {
-                neg_log_likelihood_sum = neg_log_likelihood_sum - log(bw.c_norm[k*bw.T + t]);
+                neg_log_likelihood_sum = neg_log_likelihood_sum + log(bw.c_norm[k*bw.T + t]);
             }
         }
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         // convergence criterion
-        if (i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum) < 1e-3) break;
+        if (i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum) < 1e-12) break;
 
         neg_log_likelihood_sum_old = neg_log_likelihood_sum;
 

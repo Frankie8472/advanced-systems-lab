@@ -192,9 +192,14 @@ inline bool check_and_verify(const BWdata& bw) {
     for (size_t iterations = 1; iterations < bw.max_iterations; iterations++) {
         double old_nll = bw.neg_log_likelihoods[iterations-1];
         double new_nll = bw.neg_log_likelihoods[iterations];
-        if (old_nll > new_nll + epsilon) {
+        // Note that we We want old_nll >= new_nll,
+        // because we want to minimize the negative log likelihood.
+        // Hence, we want to throw an error if and only if old_nll < new_nll.
+        // Therefore, we need the epsilon here to account for numerical errors of small numbers.
+        // (we always operate on the scale where -infinity < log(x) <= 0, i.e. 0 < x <= 1, due to x being a probability)
+        if (old_nll < new_nll - epsilon) {
             errors++;
-            printf("[%zu]\t%lf\t > \t%lf \t(old nll > new nll)\n", iterations, old_nll, new_nll);
+            printf("[%zu]\t%lf\t > \t%lf \t(old nll < new nll)\n", iterations, old_nll, new_nll);
         }
     }
     if (errors > 0){

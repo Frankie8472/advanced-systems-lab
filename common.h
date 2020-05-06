@@ -36,6 +36,11 @@ struct BWdata {
     double* const emit_prob; //           [N][M]          [n][m]            :=  P(Y_t = y_m | X_t = n)
     double* const neg_log_likelihoods; // [max_iterations] [it]             :=  array to store the neg_log_likelihood for each iteration
     double* const c_norm; //              [K][T]          [k][t]            :=  scaling/normalization factor for numerical stability
+    // NOTE that
+    // min_{λ={init_prob, trans_prob, emit_prob}} -Σ_{k}(Σ_{t} log(Pr[obs[k][t]|λ]))
+    // = min_{λ} -Σ_{k}(-Σ_{t} log(c_norm[k][t]))
+    // = min_{λ} +Σ_{k}Σ_{t}log(c_norm[k][t])
+    // (see the tutorial linked in baseline.cpp)
     double* const alpha; //               [K][T][N]       [k][t][n]         :=  P(Y_1 = y_1, ..., Y_t = y_t, X_t = n, theta)
     double* const beta; //                [K][T][N]       [k][t][n]         :=  P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = n, theta)
     double* const ggamma; //              [K][T][N]       [k][t][n]         :=  P(X_t = n | Y, theta)
