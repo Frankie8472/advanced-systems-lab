@@ -58,7 +58,7 @@ size_t comp_bw_scalar_play(const BWdata& bw){
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         // convergence criterion
-        if (i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum) < 1e-12) break;
+        if (i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12) break;
 
         neg_log_likelihood_sum_old = neg_log_likelihood_sum;
 
