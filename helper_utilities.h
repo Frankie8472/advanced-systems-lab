@@ -63,7 +63,7 @@ inline void initialize_uar(const BWdata& bw) {
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
             // % T would be wrong, because the observation sequence (over time 0 <= t < T)
-            // represent observations (categorical random variable) in 0 <= m < M
+            // represents observations (categorical random variable) in 0 <= m < M
             bw.observations[k*T + t] = t % M;
         }
     }
@@ -130,7 +130,7 @@ inline void initialize_random(const BWdata& bw) {
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
             // % T would be wrong, because the observation sequence (over time 0 <= t < T)
-            // represent observations (categorical random variable) in 0 <= m < M
+            // represents observations (categorical random variable) in 0 <= m < M
             bw.observations[k*T + t] = rand() % M;
         }
     }
