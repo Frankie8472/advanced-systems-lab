@@ -28,6 +28,14 @@
 #define PRINT_FAIL(msg, ...) printf("\x1b[1;31mFAIL:\x1b[0m " msg "\n",  ##__VA_ARGS__)
 #define PRINT_VIOLATION(msg, num, ...) printf("\x1b[1;35m%zu VIOLATIONS:\x1b[0m " msg "\n", num,  ##__VA_ARGS__)
 
+void initialize_uar(const BWdata& bw);
+void initialize_random(const BWdata& bw);
+bool check_and_verify(const BWdata& bw);
+void print_states(const BWdata& bw);
+void print_BWdata(const BWdata& bw);
+bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& bw2);
+void print_BWdata_debug_helper(const BWdata& bw, const size_t iteration_variable, const char* message);
+
 
 inline void initialize_uar(const BWdata& bw) {
     const size_t K = bw.K;
@@ -54,7 +62,9 @@ inline void initialize_uar(const BWdata& bw) {
     // (well, not really u.a.r. but let's pretend)
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
-            bw.observations[k*T + t] = t;
+            // % T would be wrong, because the observations sequence (over time 0 <= t < T)
+            // represents observations (categorical random variable) in 0 <= m < M
+            bw.observations[k*T + t] = t % M;
         }
     }
 }

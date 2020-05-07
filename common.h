@@ -45,7 +45,7 @@ struct BWdata {
     double* const beta; //                [K][T][N]       [k][t][n]         :=  P(Y_(t+1) = y_(t+1), ..., Y_N = y_N | X_t = n, theta)
     double* const ggamma; //              [K][T][N]       [k][t][n]         :=  P(X_t = n | Y, theta)
     double* const sigma; //               [K][T][N][N]    [k][t][n0][n1]    :=  P(X_t = n0, X_(t+1) = n1 | Y, theta)
-    // where theta = {init_prob, trans_prob, emit_prob} represent the model parameters we want learn/refine/estimate iteratively.
+    // where theta = {init_prob, trans_prob, emit_prob} represent the model parameters we want to learn/refine/estimate iteratively.
     double* const gamma_sum; //           [K][N]
     double* const sigma_sum; //           [K][N][N]
     bool full_copy;
