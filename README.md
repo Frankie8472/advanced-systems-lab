@@ -36,6 +36,26 @@ The project generates two executables: `benchmarks` nad `verifications`.
 
 Starting with a baseline version, we implement various optimizations to significantly speed up the performance of the Baum-Welch algorithm.
 
+## Assumptions
+
+K >= 16 and divisible by 16
+T >= 16 and divisible by 16
+N >= 16 and divisible by 16
+M >= 16 and divisible by 16
+
+This is sufficiently large to take most to all optimization possibilities into account.
+
+## Verification
+
+We have some explicit test cases, which are marked as "test_case_x" that only check the baseline, as the assumptions above may (safely) be violated.
+
+For the optimizations, we do the following
+1. Randomly initialize K, N, M, T, observations, init_prob, trans_prob and emit_prob, by generating random numbers and normalize where needed.
+2. Run the baseline implementation until convergence or max_iterations.
+3. Check whether the sequence of the negative log likelihood is monotonously decreasing in each iteration, which is guaranteed by the expectation-maximization algorithm.
+4. Check whether the rows of init_prob, trans_prob and emit_prob sum to 1.0 each, as they represent (learned) probability distributions, both before and after the run. 
+5. For each optimization: Run until convergence or max_iterations and check the probability tables of init_prob, trans_prob and emit_prob against the corresponding ones from the baseline.
+
 ## Implementations
 
 All implementations are found in the `implementations` folder. To create a new implementation follow those steps:
