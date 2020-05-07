@@ -15,25 +15,7 @@
 
     Make sure you understand it! Refer to
     https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/tutorial.pdf
-
-    Assumptions
-    K >= 4 and divisible by 4
-    N >= 4 and divisible by 4
-    M >= 4 and divisible by 4
-    T >= 4 and divisible by 4
-
-    Verified by checking monotonously decreasing
-    sequence of negative log likelihoods and whether
-    the rows of init_prob, trans_prob and emit_prob
-    sum to 1.0, with large K, N, M and T and u.a.r.
-    observations, init_prob, trans_prob and emit_prob
-
-    Note that if K = 1 and the initialization of the observational data
-    is unlucky, the probabilities could degenerate to NaNs, which is fine.
-    For simplicity, we assume divisibility by 4, which solves this problem anyway.
-
-    Code checked against Matlab implementation of
-    https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/
+    https://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf
 */
 
 #include <cmath>
