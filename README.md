@@ -78,12 +78,16 @@ REGISTER_FUNCTION(func_name, "A description about the implementation");
 
 **CAUTION**: Be aware that you cannot name your function the same as another implementation in a different file. The linker is not able to do that right now.
 
-
 ### "baseline.cpp" Implementation
 
-Should be thoroughly verified. There's a chance of probabilities degenerating to NaNs if any of the values K, N, M or T are too small. This is due to how the model works and nothing to bother about.
+Implementation of the Baum-Welch algorithm with scaling taken into account for numerical stability.
 
-For simplicity reasons and to be able to optimize as best as possible, we assume anyway that K, N, M and T each are at least 4 and divisible by 4, which solves the problem in most to all cases. It could only occur if the (random) initialization of the observational data is very unlucky.
+Main references used
+https://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm
+
+https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/tutorial.pdf
+
+https://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf
 
 ### "scalar_optimized.cpp" Implementation
 
