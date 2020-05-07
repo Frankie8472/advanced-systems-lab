@@ -62,8 +62,10 @@ inline void initialize_uar(const BWdata& bw) {
     // (well, not really u.a.r. but let's pretend)
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
-            // % T would be wrong, because the observation sequence (over time 0 <= t < T)
-            // represents observations (categorical random variable) in 0 <= m < M
+            // % T would be wrong, because the observation sequence over time 0 <= t < T
+            // represents observations that access the emission states
+            // emit_prob[n][observations[k][t]] in 0 <= m < M,
+            // which is a categorical random variable
             bw.observations[k*T + t] = t % M;
         }
     }
@@ -129,8 +131,10 @@ inline void initialize_random(const BWdata& bw) {
     // fixed observation (can be changed to e.g. all 1 for verification)
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
-            // % T would be wrong, because the observation sequence (over time 0 <= t < T)
-            // represents observations (categorical random variable) in 0 <= m < M
+            // % T would be wrong, because the observation sequence over time 0 <= t < T
+            // represents observations that access the emission states
+            // emit_prob[n][observations[k][t]] in 0 <= m < M,
+            // which is a categorical random variable
             bw.observations[k*T + t] = rand() % M;
         }
     }
