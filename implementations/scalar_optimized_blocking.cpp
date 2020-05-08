@@ -409,35 +409,80 @@ inline void backward_step(const BWdata& bw) {
 
 inline void compute_gamma(const BWdata& bw) {
     // ====== Sum up bw.ggamma (from t = 0 to bw.T-2; serve as normalizer for bw.trans_prob) =====
+    size_t kT, kTN, kN;
+
     for (size_t k = 0; k < bw.K; k++) {
+
         // Init
         double g_sum, s_sum;
+        double s_sum2;
+        double s_sum3;
+        double s_sum4;
+
+        size_t n11, n12, n13, t_t1;
+
+        kT = k*bw.T;
+        kTN = kT*bw.N;
+        kN = k*bw.N;
 
         // TODO: Loop switch+blocking if N << T or vice versa i don't know
         for (size_t n0 = 0; n0 < bw.N; n0++) {
-            // Init
-            g_sum = bw.ggamma[(k*bw.T + 0)*bw.N + n0];
 
-            for (size_t t = 1; t < bw.T-1; t++) {
+            // Init
+            g_sum = bw.ggamma[kTN + n0];
+
+            size_t t;
+            for (t = 1; t < bw.T-1-innermost_block_size_minus_one; t+=innermost_block_size) {
+                for (size_t t1 = 0; t1 < innermost_block_size; t1++){
+                    // Calculation
+                    g_sum += bw.ggamma[(kT + t + t1)*bw.N + n0];
+                }
+            }
+
+            for (; t < bw.T-1; t++){
                 // Calculation
-                g_sum += bw.ggamma[(k*bw.T + t)*bw.N + n0];
+                g_sum += bw.ggamma[(kT + t)*bw.N + n0];
             }
 
             // Store
             bw.gamma_sum[k*bw.N + n0] = g_sum;
 
             // TODO: Loop switch+blocking if N << T or vice versa i don't know
-            for (size_t n1 = 0; n1 < bw.N; n1++) {
-                // Init
-                s_sum = bw.sigma[((k*bw.T + 0)*bw.N + n0) * bw.N + n1];
+            for (size_t n1 = 0; n1 < bw.N; n1+=4) {
+                n11 = n1 + 1;
+                n12 = n1 + 2;
+                n13 = n1 + 3;
 
-                for (size_t t = 1; t < bw.T-1; t++) {
+                // Init
+                s_sum = bw.sigma[(kTN + n0) * bw.N + n1];
+                s_sum2 = bw.sigma[(kTN + n0) * bw.N + n11];
+                s_sum3 = bw.sigma[(kTN + n0) * bw.N + n12];
+                s_sum4 = bw.sigma[(kTN + n0) * bw.N + n13];
+
+                for (t = 1; t < bw.T-1-innermost_block_size_minus_one; t+=innermost_block_size) {
+                    for (size_t t1 = 0; t1 < innermost_block_size; t1++){
+                        t_t1 = t + t1;
+                        // Calculation
+                        s_sum += bw.sigma[((kT + t_t1)*bw.N + n0) * bw.N + n1];
+                        s_sum2 += bw.sigma[((kT + t_t1)*bw.N + n0) * bw.N + n11];
+                        s_sum3 += bw.sigma[((kT + t_t1)*bw.N + n0) * bw.N + n12];
+                        s_sum4 += bw.sigma[((kT + t_t1)*bw.N + n0) * bw.N + n13];
+                    }
+                }
+
+                for (; t < bw.T-1; t++){
                     // Calculation
-                    s_sum += bw.sigma[((k*bw.T + t)*bw.N + n0) * bw.N + n1];
+                    s_sum += bw.sigma[((kT + t)*bw.N + n0) * bw.N + n1];
+                    s_sum2 += bw.sigma[((kT + t)*bw.N + n0) * bw.N + n11];
+                    s_sum3 += bw.sigma[((kT + t)*bw.N + n0) * bw.N + n12];
+                    s_sum4 += bw.sigma[((kT + t)*bw.N + n0) * bw.N + n13];
                 }
 
                 // Store
-                bw.sigma_sum[(k*bw.N + n0) * bw.N + n1] = s_sum;
+                bw.sigma_sum[(kN + n0) * bw.N + n1] = s_sum;
+                bw.sigma_sum[(kN + n0) * bw.N + n11] = s_sum2;
+                bw.sigma_sum[(kN + n0) * bw.N + n12] = s_sum3;
+                bw.sigma_sum[(kN + n0) * bw.N + n13] = s_sum4;
             }
         }
     }
