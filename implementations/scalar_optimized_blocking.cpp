@@ -30,8 +30,8 @@ void update_trans_prob(const BWdata& bw);
 void update_emit_prob(const BWdata& bw);
 size_t comp_bw_scalar_blocking(const BWdata& bw);
 
-//variable for the innermost block size; must be smaller than min(N,K)
-size_t innermost_block_size = 7;
+//variable for the innermost block size; must be smaller than min(N,K,T-2)
+size_t innermost_block_size = 8;
 
 size_t innermost_block_size_minus_one = innermost_block_size - 1;
 
