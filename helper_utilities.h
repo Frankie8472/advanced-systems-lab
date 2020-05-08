@@ -28,6 +28,14 @@
 #define PRINT_FAIL(msg, ...) printf("\x1b[1;31mFAIL:\x1b[0m " msg "\n",  ##__VA_ARGS__)
 #define PRINT_VIOLATION(msg, num, ...) printf("\x1b[1;35m%zu VIOLATIONS:\x1b[0m " msg "\n", num,  ##__VA_ARGS__)
 
+void initialize_uar(const BWdata& bw);
+void initialize_random(const BWdata& bw);
+bool check_and_verify(const BWdata& bw);
+void print_states(const BWdata& bw);
+void print_BWdata(const BWdata& bw);
+bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& bw2);
+void print_BWdata_debug_helper(const BWdata& bw, const size_t iteration_variable, const char* message);
+
 
 inline void initialize_uar(const BWdata& bw) {
     const size_t K = bw.K;
@@ -54,7 +62,11 @@ inline void initialize_uar(const BWdata& bw) {
     // (well, not really u.a.r. but let's pretend)
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
-            bw.observations[k*T + t] = t;
+            // % T would be wrong, because the observation sequence over time 0 <= t < T
+            // represents observations that access the emission states
+            // emit_prob[n][observations[k][t]] in 0 <= m < M,
+            // which is a categorical random variable
+            bw.observations[k*T + t] = t % M;
         }
     }
 }
@@ -119,8 +131,10 @@ inline void initialize_random(const BWdata& bw) {
     // fixed observation (can be changed to e.g. all 1 for verification)
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
-            // % T would be wrong, because the observations sequence (over time 0 <= t < T)
-            // represents observations (categorical random variable) in 0 <= m < M
+            // % T would be wrong, because the observation sequence over time 0 <= t < T
+            // represents observations that access the emission states
+            // emit_prob[n][observations[k][t]] in 0 <= m < M,
+            // which is a categorical random variable
             bw.observations[k*T + t] = rand() % M;
         }
     }
@@ -258,19 +272,19 @@ inline void print_BWdata(const BWdata& bw) {
 
     print_states(bw); // prints bw.init_prob, bw.trans_prob and bw.emit_prob
 
-    printf("Negative Log Likelihoods (tip: should change once per iteration):\n");
+    printf("Negative Log Likelihoods (tip: should change once per iteration)\n");
     for (size_t it = 0; it < bw.max_iterations; it++) {
         printf("NLL[it = %zu] = %f\n", it, bw.neg_log_likelihoods[it]);
     }
 
-    //printf("\nc_norm:\n");
+    printf("\n(tip: Should only change during the forward_step):\n");
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
             printf("c_norm[k = %zu][t = %zu] = %f\n", k, t, bw.c_norm[k*bw.T + t]);
         }
     }
 
-    //printf("\nalpha:\n");
+    printf("\n(tip: Should only change during the forward_step)\n");
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
             for (size_t n = 0; n < bw.N; n++) {
@@ -279,11 +293,35 @@ inline void print_BWdata(const BWdata& bw) {
         }
     }
 
-    //printf("\nbeta:\n");
+    printf("\ntip: Can be NaNs, overflow, underflow or vanish to zero (that's why we use scaling)\n");
+    for (size_t k = 0; k < bw.K; k++) {
+        double C_t = 1.0;
+        for (size_t t = 0; t < bw.T; t++) {
+            C_t *= bw.c_norm[k*bw.T + t];
+            for (size_t n = 0; n < bw.N; n++) {
+                printf("DE-SCALEDalpha[k = %zu][t = %zu][n = %zu] = %f\n", k, t, n, bw.alpha[(k*bw.T + t)*bw.N + n]/C_t);
+            }
+        }
+    }
+
+    printf("\n(tip: Should only change during the backward_step)\n");
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t t = 0; t < bw.T; t++) {
             for (size_t n = 0; n < bw.N; n++) {
                 printf("beta[k = %zu][t = %zu][n = %zu] = %f\n", k, t, n, bw.beta[(k*bw.T + t)*bw.N + n]);
+            }
+        }
+    }
+
+    printf("\ntip: Can be NaNs, overflow, underflow or vanish to zero (that's why we use scaling)\n");
+    for (size_t k = 0; k < bw.K; k++) {
+        for (size_t t = 0; t < bw.T; t++) {
+            double D_t = 1.0;
+            for (size_t tt = t; tt < bw.T; tt++) {
+                D_t *= bw.c_norm[k*bw.T + tt];
+            }
+            for (size_t n = 0; n < bw.N; n++) {
+                printf("DE-SCALEDbeta[k = %zu][t = %zu][n = %zu] = %f\n", k, t, n, bw.beta[(k*bw.T + t)*bw.N + n]/D_t);
             }
         }
     }

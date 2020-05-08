@@ -94,12 +94,12 @@ inline void check_user_functions(const size_t nb_random_tests) {
         const size_t K = (rand() % 2)*16 + 16;
         const size_t N = (rand() % 3)*16 + 16;
         const size_t M = (rand() % 3)*16 + 16;
-        const size_t T = (rand() % 2)*16 + 16;
+        const size_t T = (rand() % 4)*16 + 16;
         const size_t max_iterations = 1000;
 
         // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
         const BWdata& bw_baseline_initialized = create_BWdata(K, N, M, T, max_iterations);
-        //initialize_uar(bw_baseline_initialized);
+        //initialize_uar(bw_baseline_initialized); // converges fast, but works now.
         initialize_random(bw_baseline_initialized);
         const BWdata& bw_baseline = full_copy_BWdata(bw_baseline_initialized);
 
