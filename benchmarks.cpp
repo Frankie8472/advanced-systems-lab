@@ -27,7 +27,7 @@
 
 
 #define NUM_RUNS 100
-#define CYCLES_REQUIRED 1e8
+#define CYCLES_REQUIRED 1e9
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
 #define REP 20
@@ -151,10 +151,10 @@ int main(int argc, char **argv) {
     // randomize seed
     srand(time(NULL));
 
-    const size_t K = 24; // number of observation sequences / training datasets
-    const size_t N = 24; // number of hidden state variables
-    const size_t M = 24; // number of observations
-    const size_t T = 26; // number of time steps
+    const size_t K = 32; // number of observation sequences / training datasets
+    const size_t N = 32; // number of hidden state variables
+    const size_t M = 32; // number of observations
+    const size_t T = 34; // number of time steps
     if ( argc != 2 ) {
         printf("usage: %s <max_iterations>\n", argv[0]);
         return -1;
