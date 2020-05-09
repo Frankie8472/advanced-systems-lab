@@ -85,6 +85,8 @@ inline void forward_step(const BWdata& bw) {
 
     size_t n01, n02, n03;
 
+    size_t kTNn_n0, kTNn, kTt, n1_n11N, n1N, kTNn0_n00, kTNn0;
+
     for (size_t k = 0; k < bw.K; k++) {
         // t = 0, base case
 
@@ -133,28 +135,29 @@ inline void forward_step(const BWdata& bw) {
         for (; n < bw.N-innermost_block_size_minus_one; n+=innermost_block_size){
 
             for (size_t n0 = 0; n0 < innermost_block_size; n0++){
-                n_n0 = n + n0;
+                kTNn_n0 = kTN + n + n0;
 
                 // Load
-                alpha = bw.alpha[kTN + n_n0];
+                alpha = bw.alpha[kTNn_n0];
 
                 // Calculate
                 alpha *= c_norm;
 
                 // Store
-                bw.alpha[kTN + n_n0] = alpha;
+                bw.alpha[kTNn_n0] = alpha;
             }
         }
 
         for (; n < bw.N; n++){
+            kTNn = kTN + n;
             // Load
-            alpha = bw.alpha[kTN + n];
+            alpha = bw.alpha[kTNn];
 
             // Calculate
             alpha *= c_norm;
 
             // Store
-            bw.alpha[kTN + n] = alpha;
+            bw.alpha[kTNn] = alpha;
         }
 
         // Store
@@ -162,9 +165,11 @@ inline void forward_step(const BWdata& bw) {
 
         // recursion step
         for (size_t t = 1; t < bw.T; t++) {
+            kTt = kT + t;
+
             c_norm = 0;
-            observations = bw.observations[kT + t];
-            kTN = (kT + t)*bw.N;
+            observations = bw.observations[kTt];
+            kTN = kTt*bw.N;
 
             for (size_t n0 = 0; n0 < bw.N; n0+=4) {
                 n01 = n0 + 1;
@@ -186,13 +191,14 @@ inline void forward_step(const BWdata& bw) {
 
                     for (size_t n11 = 0; n11 < innermost_block_size; n11++){
                         n1_n11 = n1 + n11;
+                        n1_n11N = n1_n11*bw.N;
 
                         // Load
                         alpha = bw.alpha[kTN - bw.N + n1_n11];
-                        trans_prob = bw.trans_prob[n1_n11*bw.N + n0];
-                        trans_prob2 = bw.trans_prob[n1_n11*bw.N + n01];
-                        trans_prob3 = bw.trans_prob[n1_n11*bw.N + n02];
-                        trans_prob4 = bw.trans_prob[n1_n11*bw.N + n03];
+                        trans_prob = bw.trans_prob[n1_n11N + n0];
+                        trans_prob2 = bw.trans_prob[n1_n11N + n01];
+                        trans_prob3 = bw.trans_prob[n1_n11N + n02];
+                        trans_prob4 = bw.trans_prob[n1_n11N + n03];
 
                         // Calculate
                         alpha_sum += alpha * trans_prob;
@@ -203,12 +209,14 @@ inline void forward_step(const BWdata& bw) {
                 }
 
                 for (; n1 < bw.N; n1++){
+                    n1N = n1*bw.N;
+
                     // Load
                     alpha = bw.alpha[kTN - bw.N + n1];
-                    trans_prob = bw.trans_prob[n1*bw.N + n0];
-                    trans_prob2 = bw.trans_prob[n1*bw.N + n01];
-                    trans_prob3 = bw.trans_prob[n1*bw.N + n02];
-                    trans_prob4 = bw.trans_prob[n1*bw.N + n03];
+                    trans_prob = bw.trans_prob[n1N + n0];
+                    trans_prob2 = bw.trans_prob[n1N + n01];
+                    trans_prob3 = bw.trans_prob[n1N + n02];
+                    trans_prob4 = bw.trans_prob[n1N + n03];
 
                     // Calculate
                     alpha_sum += alpha * trans_prob;
@@ -239,31 +247,34 @@ inline void forward_step(const BWdata& bw) {
 
                 for (size_t n00 = 0 ; n00 < innermost_block_size; n00++){
                     n0_n00 = n0 + n00;
+                    kTNn0_n00 = kTN + n0_n00;
 
                     // Load
-                    alpha = bw.alpha[kTN + n0_n00];
+                    alpha = bw.alpha[kTNn0_n00];
 
                     // Calculate
                     alpha *= c_norm;
 
                     // Store
-                    bw.alpha[kTN + n0_n00] = alpha;
+                    bw.alpha[kTNn0_n00] = alpha;
                 }
             }
 
             for (; n0 < bw.N; n0++){
+                kTNn0 = kTN + n0;
+
                 // Load
-                alpha = bw.alpha[kTN + n0];
+                alpha = bw.alpha[kTNn0];
 
                 // Calculate
                 alpha *= c_norm;
 
                 // Store
-                bw.alpha[kTN + n0] = alpha;
+                bw.alpha[kTNn0] = alpha;
             }
 
             // Store
-            bw.c_norm[kT + t] = c_norm;
+            bw.c_norm[kTt] = c_norm;
         }
 
     }
@@ -277,16 +288,19 @@ inline void backward_step(const BWdata& bw) {
     double alpha3, beta_sum3, trans_prob3;
     double alpha4, beta_sum4, trans_prob4;
 
-    size_t observations, kTN, kTNN, kT, nN, n1_n10, n_n0;
+    size_t observations, kTTN, kTNN, kT, nN, n1_n10, n_n0;
     size_t kTNN2, nN2;
     size_t kTNN3, nN3;
     size_t kTNN4, nN4;
 
     size_t n01, n02, n03;
 
+    size_t kTTNn_n0, kTTNn, kTt, kTtN, kTtNn0, kTtNn01, kTtNn02, kTtNn03;
+
+
     for (size_t k = 0; k < bw.K; k++) {
         // t = bw.T, base case
-        kTN = (k*bw.T + (bw.T-1))*bw.N;
+        kTTN = (k*bw.T + (bw.T-1))*bw.N;
 
         // Load
         c_norm = bw.c_norm[k*bw.T + (bw.T-1)];
@@ -295,56 +309,66 @@ inline void backward_step(const BWdata& bw) {
 
             for (size_t n0 = 0; n0 < innermost_block_size; n0++){
                 n_n0 = n + n0;
+                kTTNn_n0 = kTTN + n_n0;
 
                 // Load
-                alpha = bw.alpha[kTN + n_n0];
+                alpha = bw.alpha[kTTNn_n0];
 
                 // Store
-                bw.beta[kTN + n_n0] = c_norm;
-                bw.ggamma[kTN + n_n0] = alpha;
+                bw.beta[kTTNn_n0] = c_norm;
+                bw.ggamma[kTTNn_n0] = alpha;
             }
 
         }
 
         for (; n < bw.N; n++){
+            kTTNn = kTTN + n;
+
             // Load
-            alpha = bw.alpha[kTN + n];
+            alpha = bw.alpha[kTTNn];
 
             // Store
-            bw.beta[kTN + n] = c_norm;
-            bw.ggamma[kTN + n] = alpha;
+            bw.beta[kTTNn] = c_norm;
+            bw.ggamma[kTTNn] = alpha;
         }
 
         // Recursion step
         kT = k*bw.T;
+
         for (int t = bw.T-2; t >= 0; t--) {
+            kTt = kT + t;
+
             // Load
-            observations = bw.observations[kT + (t+1)];
-            c_norm = bw.c_norm[kT + t];
-            kTN = (kT + t) * bw.N;
+            observations = bw.observations[kTt + 1];
+            c_norm = bw.c_norm[kTt];
+            kTtN = kTt*bw.N;
 
             for (size_t n0 = 0; n0 < bw.N; n0+=4) {
                 n01 = n0 + 1;
                 n02 = n0 + 2;
                 n03 = n0 + 3;
+                kTtNn0 = kTtN + n0;
+                kTtNn01 = kTtN + n01;
+                kTtNn02 = kTtN + n02;
+                kTtNn03 = kTtN + n03;
 
                 // Load
                 beta_sum = 0.0;
                 beta_sum2 = 0.0;
                 beta_sum3 = 0.0;
                 beta_sum4 = 0.0;
-                alpha = bw.alpha[(kT + t)*bw.N + n0];
-                alpha2 = bw.alpha[(kT + t)*bw.N + n01];
-                alpha3 = bw.alpha[(kT + t)*bw.N + n02];
-                alpha4 = bw.alpha[(kT + t)*bw.N + n03];
+                alpha = bw.alpha[kTtNn0];
+                alpha2 = bw.alpha[kTtNn01];
+                alpha3 = bw.alpha[kTtNn02];
+                alpha4 = bw.alpha[kTtNn03];
                 nN = n0 * bw.N;
-                nN2 = (n01) * bw.N;
-                nN3 = (n02) * bw.N;
-                nN4 = (n03) * bw.N;
-                kTNN = (kTN + n0)*bw.N;
-                kTNN2 = (kTN + n01)*bw.N;
-                kTNN3 = (kTN + n02)*bw.N;
-                kTNN4 = (kTN + n03)*bw.N;
+                nN2 = n01 * bw.N;
+                nN3 = n02 * bw.N;
+                nN4 = n03 * bw.N;
+                kTNN = (kTtNn0)*bw.N;
+                kTNN2 = (kTtNn01)*bw.N;
+                kTNN3 = (kTtNn02)*bw.N;
+                kTNN4 = (kTtNn03)*bw.N;
 
                 size_t n1 = 0;
                 for (; n1 < bw.N-innermost_block_size_minus_one; n1+=innermost_block_size) {
@@ -353,7 +377,7 @@ inline void backward_step(const BWdata& bw) {
                         n1_n10 = n1 + n10;
 
                         // Load
-                        beta = bw.beta[kTN + bw.N + n1_n10];
+                        beta = bw.beta[kTtN + bw.N + n1_n10];
                         trans_prob = bw.trans_prob[nN + n1_n10];
                         trans_prob2 = bw.trans_prob[nN2 + n1_n10];
                         trans_prob3 = bw.trans_prob[nN3 + n1_n10];
@@ -374,7 +398,7 @@ inline void backward_step(const BWdata& bw) {
 
                 for (; n1 < bw.N; n1++){
                     // Load
-                    beta = bw.beta[kTN + bw.N + n1];
+                    beta = bw.beta[kTtN + bw.N + n1];
                     trans_prob = bw.trans_prob[nN + n1];
                     trans_prob2 = bw.trans_prob[nN2 + n1];
                     trans_prob3 = bw.trans_prob[nN3 + n1];
@@ -393,14 +417,14 @@ inline void backward_step(const BWdata& bw) {
                 }
 
                 // Calculate & store
-                bw.beta[kTN + n0] = beta_sum * c_norm;
-                bw.beta[kTN + n01] = beta_sum2 * c_norm;
-                bw.beta[kTN + n02] = beta_sum3 * c_norm;
-                bw.beta[kTN + n03] = beta_sum4 * c_norm;
-                bw.ggamma[kTN + n0] = alpha * beta_sum;
-                bw.ggamma[kTN + n01] = alpha2 * beta_sum2;
-                bw.ggamma[kTN + n02] = alpha3 * beta_sum3;
-                bw.ggamma[kTN + n03] = alpha4 * beta_sum4;
+                bw.beta[kTtNn0] = beta_sum * c_norm;
+                bw.beta[kTtNn01] = beta_sum2 * c_norm;
+                bw.beta[kTtNn02] = beta_sum3 * c_norm;
+                bw.beta[kTtNn03] = beta_sum4 * c_norm;
+                bw.ggamma[kTtNn0] = alpha * beta_sum;
+                bw.ggamma[kTtNn01] = alpha2 * beta_sum2;
+                bw.ggamma[kTtNn02] = alpha3 * beta_sum3;
+                bw.ggamma[kTtNn03] = alpha4 * beta_sum4;
             }
         }
     }
@@ -419,7 +443,9 @@ inline void compute_gamma(const BWdata& bw) {
         double s_sum3;
         double s_sum4;
 
-        size_t n11, n12, n13, t_t1;
+        size_t n11, n12, n13;
+
+        size_t kTNn0N, kTt_t1Nn0, kTtNn0N, kNn0N;
 
         kT = k*bw.T;
         kTN = kT*bw.N;
@@ -427,12 +453,15 @@ inline void compute_gamma(const BWdata& bw) {
 
         // TODO: Loop switch+blocking if N << T or vice versa i don't know
         for (size_t n0 = 0; n0 < bw.N; n0++) {
+            kTNn0N = (kTN + n0) * bw.N;
+            kNn0N = (kN + n0) * bw.N;
 
             // Init
             g_sum = bw.ggamma[kTN + n0];
 
             size_t t;
             for (t = 1; t < bw.T-1-innermost_block_size_minus_one; t+=innermost_block_size) {
+
                 for (size_t t1 = 0; t1 < innermost_block_size; t1++){
                     // Calculation
                     g_sum += bw.ggamma[(kT + t + t1)*bw.N + n0];
@@ -454,35 +483,38 @@ inline void compute_gamma(const BWdata& bw) {
                 n13 = n1 + 3;
 
                 // Init
-                s_sum = bw.sigma[(kTN + n0) * bw.N + n1];
-                s_sum2 = bw.sigma[(kTN + n0) * bw.N + n11];
-                s_sum3 = bw.sigma[(kTN + n0) * bw.N + n12];
-                s_sum4 = bw.sigma[(kTN + n0) * bw.N + n13];
+                s_sum = bw.sigma[kTNn0N + n1];
+                s_sum2 = bw.sigma[kTNn0N + n11];
+                s_sum3 = bw.sigma[kTNn0N + n12];
+                s_sum4 = bw.sigma[kTNn0N + n13];
 
                 for (t = 1; t < bw.T-1-innermost_block_size_minus_one; t+=innermost_block_size) {
                     for (size_t t1 = 0; t1 < innermost_block_size; t1++){
-                        t_t1 = t + t1;
+                        kTt_t1Nn0 = ((kT + t + t1)*bw.N + n0) * bw.N;
+
                         // Calculation
-                        s_sum += bw.sigma[((kT + t_t1)*bw.N + n0) * bw.N + n1];
-                        s_sum2 += bw.sigma[((kT + t_t1)*bw.N + n0) * bw.N + n11];
-                        s_sum3 += bw.sigma[((kT + t_t1)*bw.N + n0) * bw.N + n12];
-                        s_sum4 += bw.sigma[((kT + t_t1)*bw.N + n0) * bw.N + n13];
+                        s_sum += bw.sigma[kTt_t1Nn0 + n1];
+                        s_sum2 += bw.sigma[kTt_t1Nn0 + n11];
+                        s_sum3 += bw.sigma[kTt_t1Nn0 + n12];
+                        s_sum4 += bw.sigma[kTt_t1Nn0 + n13];
                     }
                 }
 
                 for (; t < bw.T-1; t++){
+                    kTtNn0N = ((kT + t)*bw.N + n0) * bw.N;
+
                     // Calculation
-                    s_sum += bw.sigma[((kT + t)*bw.N + n0) * bw.N + n1];
-                    s_sum2 += bw.sigma[((kT + t)*bw.N + n0) * bw.N + n11];
-                    s_sum3 += bw.sigma[((kT + t)*bw.N + n0) * bw.N + n12];
-                    s_sum4 += bw.sigma[((kT + t)*bw.N + n0) * bw.N + n13];
+                    s_sum += bw.sigma[kTtNn0N + n1];
+                    s_sum2 += bw.sigma[kTtNn0N + n11];
+                    s_sum3 += bw.sigma[kTtNn0N + n12];
+                    s_sum4 += bw.sigma[kTtNn0N + n13];
                 }
 
                 // Store
-                bw.sigma_sum[(kN + n0) * bw.N + n1] = s_sum;
-                bw.sigma_sum[(kN + n0) * bw.N + n11] = s_sum2;
-                bw.sigma_sum[(kN + n0) * bw.N + n12] = s_sum3;
-                bw.sigma_sum[(kN + n0) * bw.N + n13] = s_sum4;
+                bw.sigma_sum[kNn0N + n1] = s_sum;
+                bw.sigma_sum[kNn0N + n11] = s_sum2;
+                bw.sigma_sum[kNn0N + n12] = s_sum3;
+                bw.sigma_sum[kNn0N + n13] = s_sum4;
             }
         }
     }
@@ -550,8 +582,9 @@ inline void update_init_prob(const BWdata& bw) {
     double g0_sum;
     double g0_sum2, g0_sum3, g0_sum4;
 
-    size_t k_k0;
     size_t n1, n2, n3;
+
+    size_t k_k0TN, kTN;
 
     for (size_t n = 0; n < bw.N; n+=4) {
         n1 = n + 1;
@@ -568,22 +601,24 @@ inline void update_init_prob(const BWdata& bw) {
         for (; k < bw.K-innermost_block_size_minus_one; k+=innermost_block_size) {
 
             for (size_t k0 = 0; k0 < innermost_block_size; k0++){
-                k_k0 = k + k0;
+                k_k0TN  = (k + k0)*bw.T*bw.N;
 
                 // Calculate
-                g0_sum += bw.ggamma[k_k0*bw.T*bw.N + n];
-                g0_sum2 += bw.ggamma[k_k0*bw.T*bw.N + n1];
-                g0_sum3 += bw.ggamma[k_k0*bw.T*bw.N + n2];
-                g0_sum4 += bw.ggamma[k_k0*bw.T*bw.N + n3];
+                g0_sum += bw.ggamma[k_k0TN + n];
+                g0_sum2 += bw.ggamma[k_k0TN + n1];
+                g0_sum3 += bw.ggamma[k_k0TN + n2];
+                g0_sum4 += bw.ggamma[k_k0TN + n3];
             }
         }
 
         for (; k < bw.K; k++){
+            kTN = k*bw.T*bw.N;
+
             // Calculate
-            g0_sum += bw.ggamma[k*bw.T*bw.N + n];
-            g0_sum2 += bw.ggamma[k*bw.T*bw.N + n1];
-            g0_sum3 += bw.ggamma[k*bw.T*bw.N + n2];
-            g0_sum4 += bw.ggamma[k*bw.T*bw.N + n3];
+            g0_sum += bw.ggamma[kTN + n];
+            g0_sum2 += bw.ggamma[kTN + n1];
+            g0_sum3 += bw.ggamma[kTN + n2];
+            g0_sum4 += bw.ggamma[kTN + n3];
         }
 
         //Store
@@ -602,9 +637,11 @@ inline void update_trans_prob(const BWdata& bw) {
     double numerator_sum3;
     double numerator_sum4;
 
-    size_t nN, k_k0;
+    size_t nN;
 
     size_t n11, n12, n13;
+
+    size_t k_k0N, k_k0Nn0N, kN, kNn0N;
 
     for (size_t n0 = 0; n0 < bw.N; n0++) {
         nN = n0*bw.N;
@@ -626,26 +663,30 @@ inline void update_trans_prob(const BWdata& bw) {
             for (; k < bw.K-innermost_block_size_minus_one; k+=innermost_block_size) {
 
                 for (size_t k0 = 0; k0 < innermost_block_size; k0++){
-                    k_k0 = k + k0;
+                    k_k0N = (k + k0)*bw.N;
+                    k_k0Nn0N = (k_k0N + n0)*bw.N;
 
                     // Calculate
-                    numerator_sum += bw.sigma_sum[(k_k0*bw.N + n0)*bw.N + n1];
-                    numerator_sum2 += bw.sigma_sum[(k_k0*bw.N + n0)*bw.N + n11];
-                    numerator_sum3 += bw.sigma_sum[(k_k0*bw.N + n0)*bw.N + n12];
-                    numerator_sum4 += bw.sigma_sum[(k_k0*bw.N + n0)*bw.N + n13];
+                    numerator_sum += bw.sigma_sum[k_k0Nn0N + n1];
+                    numerator_sum2 += bw.sigma_sum[k_k0Nn0N + n11];
+                    numerator_sum3 += bw.sigma_sum[k_k0Nn0N + n12];
+                    numerator_sum4 += bw.sigma_sum[k_k0Nn0N + n13];
 
-                    denominator_sum += bw.gamma_sum[k_k0*bw.N + n0];
+                    denominator_sum += bw.gamma_sum[k_k0N + n0];
                 }
             }
 
             for (; k < bw.K; k++){
-                // Calculate
-                numerator_sum += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1];
-                numerator_sum2 += bw.sigma_sum[(k*bw.N + n0)*bw.N + n11];
-                numerator_sum3 += bw.sigma_sum[(k*bw.N + n0)*bw.N + n12];
-                numerator_sum4 += bw.sigma_sum[(k*bw.N + n0)*bw.N + n13];
+                kN = k*bw.N;
+                kNn0N = (kN + n0)*bw.N;
 
-                denominator_sum += bw.gamma_sum[k*bw.N + n0];
+                // Calculate
+                numerator_sum += bw.sigma_sum[kNn0N + n1];
+                numerator_sum2 += bw.sigma_sum[kNn0N + n11];
+                numerator_sum3 += bw.sigma_sum[kNn0N + n12];
+                numerator_sum4 += bw.sigma_sum[kNn0N + n13];
+
+                denominator_sum += bw.gamma_sum[kN + n0];
             }
 
             // Store
@@ -668,6 +709,8 @@ inline void update_emit_prob(const BWdata& bw) {
 
     size_t n_n0;
     size_t k1, k2, k3;
+
+    size_t kTt;
 
     // add last bw.T-step to bw.gamma_sum
     for (size_t k = 0; k < bw.K; k+=4) {
@@ -714,8 +757,9 @@ inline void update_emit_prob(const BWdata& bw) {
             for (size_t k = 0; k < bw.K; k++) {
                 ggamma_cond_sum = 0.0;
                 for (size_t t = 0; t < bw.T; t++) {
-                    if (bw.observations[k*bw.T + t] == m) {
-                        ggamma_cond_sum += bw.ggamma[(k*bw.T + t)*bw.N + n];
+                    kTt = k*bw.T + t;
+                    if (bw.observations[kTt] == m) {
+                        ggamma_cond_sum += bw.ggamma[kTt*bw.N + n];
                     }
                 }
                 numerator_sum += ggamma_cond_sum;
