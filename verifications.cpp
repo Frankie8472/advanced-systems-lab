@@ -102,7 +102,7 @@ inline void check_user_functions(const size_t nb_random_tests) {
         const size_t K = (rand() % 2)*16 + 16;
         const size_t N = (rand() % 3)*16 + 16;
         const size_t M = (rand() % 3)*16 + 16;
-        const size_t T = (rand() % 4)*17 + 17;
+        const size_t T = (rand() % 4)*16 + 18;
         const size_t max_iterations = 100;
 
         // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)

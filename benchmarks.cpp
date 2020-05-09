@@ -27,7 +27,7 @@
 
 
 #define NUM_RUNS 100
-#define CYCLES_REQUIRED 1e9
+#define CYCLES_REQUIRED 1e8
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
 #define REP 20
@@ -90,13 +90,12 @@ void perf_test(compute_bw_func func, const BWdata& bw){
 #endif
     // Actual performance measurements repeated REP times.
     printf("num_runs: %zu\n", num_runs);
-    if (num_runs == 1){
-        printf("\x1b[1;36mWarning:\x1b[0m Weird case is happening...\n");
-    }
+
     double total_cycles = 0;
-    size_t iter = 0;
+    size_t iter;
     size_t total_iter = 0;
     for (size_t j = 0; j < REP; j++) {
+        iter = 0;
         // Create all copies for all runs of the function
         for(size_t i = 0; i < num_runs; i++){
             bw_data.push_back(&copy_BWdata(bw));
