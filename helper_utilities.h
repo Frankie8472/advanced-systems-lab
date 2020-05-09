@@ -28,6 +28,8 @@
 #define PRINT_FAIL(msg, ...) printf("\x1b[1;31mFAIL:\x1b[0m " msg "\n",  ##__VA_ARGS__)
 #define PRINT_VIOLATION(msg, num, ...) printf("\x1b[1;35m%zu VIOLATIONS:\x1b[0m " msg "\n", num,  ##__VA_ARGS__)
 
+#define EPSILON 1e-6
+
 void initialize_uar(const BWdata& bw);
 void initialize_random(const BWdata& bw);
 bool check_and_verify(const BWdata& bw);
@@ -155,13 +157,12 @@ inline bool check_and_verify(const BWdata& bw) {
     double emit_sum;
     bool success = true;
 
-    const double epsilon = 10-8;
-
     // check if the initial distribution sums to 1.0
     init_sum = 0.0;
+    printf("\n");
     for (size_t n = 0; n < N; n++) init_sum += bw.init_prob[n];
-    if ( abs(init_sum - 1.0) < epsilon ) PRINT_PASSED("init_prob sums to 1.0");
-    else PRINT_VIOLATION("init_prob sums to %lf\n", 1L, init_sum);
+    if ( abs(init_sum - 1.0) < EPSILON ) PRINT_PASSED("init_prob sums to 1.0");
+    else PRINT_VIOLATION("init_prob sums to %lf", 1L, init_sum);
 
     // check if the rows of the transition distribution sum to 1.0
     errors = 0;
@@ -170,7 +171,7 @@ inline bool check_and_verify(const BWdata& bw) {
         for (size_t n1 = 0; n1 < N; n1++) {
             trans_sum += bw.trans_prob[n0*N + n1];
         }
-        if ( ! ( abs(trans_sum - 1.0) < epsilon ) ) { 
+        if ( ! ( abs(trans_sum - 1.0) < EPSILON ) ) { 
             errors++;
             PRINT_FAIL("trans_prob[%zu] sums to %lf", n0, trans_sum);
         }
@@ -189,7 +190,7 @@ inline bool check_and_verify(const BWdata& bw) {
         for (size_t m = 0; m < M; m++) {
             emit_sum += bw.emit_prob[n*M + m];
         }
-        if ( ! ( abs(emit_sum - 1.0) < epsilon ) ) { 
+        if ( ! ( abs(emit_sum - 1.0) < EPSILON ) ) { 
             errors++;
             PRINT_FAIL("emit_prob[%zu] sums to %lf", n, emit_sum);
         }
@@ -209,18 +210,18 @@ inline bool check_and_verify(const BWdata& bw) {
         // Note that we We want old_nll >= new_nll,
         // because we want to minimize the negative log likelihood.
         // Hence, we want to throw an error if and only if old_nll < new_nll.
-        // Therefore, we need the epsilon here to account for numerical errors of small numbers.
+        // Therefore, we need the EPSILON here to account for numerical errors of small numbers.
         // (we always operate on the scale where -infinity < log(x) <= 0, i.e. 0 < x <= 1, due to x being a probability)
-        if (old_nll < new_nll - epsilon) {
+        if (old_nll < new_nll - EPSILON) {
             errors++;
-            printf("[%zu]\t%lf\t > \t%lf \t(old nll < new nll)\n", iterations, old_nll, new_nll);
+            printf("[%zu]\t%lf\t > \t%lf \t(old nll < new nll)", iterations, old_nll, new_nll);
         }
     }
     if (errors > 0){
-        PRINT_VIOLATION("of the monotonicity of the negative log likelihood\n", errors);
+        PRINT_VIOLATION("of the monotonicity of the negative log likelihood", errors);
         success = false;
     } else {
-        PRINT_PASSED("monotonocity of the negative log likelihood\n");
+        PRINT_PASSED("monotonocity of the negative log likelihood");
     }
 
     return success;
@@ -369,9 +370,9 @@ inline void print_BWdata(const BWdata& bw) {
  * INPUT
  * two const BWdata& structs to compare against
  * OUTPUT
- * true if both structs contain the same below mentioned data up to some numerical epsilon
+ * true if both structs contain the same below mentioned data up to some numerical EPSILON
  * DESCRIPTION
- * checks whether the following match up to an numerical epsilon:
+ * checks whether the following match up to an numerical EPSILON:
  * Initialization Probabilities, Transition Probabilities and Emission Probabilities
  * */
 inline bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& bw2) {
@@ -409,12 +410,10 @@ inline bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& 
     size_t errors_local = 0;
     size_t errors_total = 0;
 
-    const double epsilon = 1e-6;
-
     for(size_t n = 0; n < N; n++) {
         const size_t index = n;
         const double err_abs_diff = abs(bw1.init_prob[index] - bw2.init_prob[index]);
-        if ( ! ( err_abs_diff < epsilon ) ) { 
+        if ( ! ( err_abs_diff < EPSILON ) ) { 
             errors_local++;
         }
     }
@@ -430,7 +429,7 @@ inline bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& 
         for(size_t n1 = 0; n1 < N; n1++) {
             const size_t index = n0*N + n1;
             const double err_abs_diff = abs(bw1.trans_prob[index] - bw2.trans_prob[index]);
-            if ( ! ( err_abs_diff < epsilon ) ) { 
+            if ( ! ( err_abs_diff < EPSILON ) ) { 
                 errors_local++;
             }
         }
@@ -448,7 +447,7 @@ inline bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& 
         for(size_t m = 0; m < M; m++) {
             const size_t index = n*M + m;
             const double err_abs_diff = abs(bw1.emit_prob[index] - bw2.emit_prob[index]);
-            if ( ! ( err_abs_diff < epsilon ) ) { 
+            if ( ! ( err_abs_diff < EPSILON ) ) { 
                 errors_local++;
             }
         }
@@ -475,9 +474,9 @@ inline bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& 
  * INPUT
  * two const BWdata& structs to compare against
  * OUTPUT
- * true if both structs contain the same data up to some numerical epsilon
+ * true if both structs contain the same data up to some numerical EPSILON
  * DESCRIPTION
- * checks whether each single field of each variable and array match up to an epsilon
+ * checks whether each single field of each variable and array match up to an EPSILON
  * */
 // judge me aaaaaaaaaaaaall u want uwu
 inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
@@ -518,13 +517,11 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
     size_t errors_local = 0;
     size_t errors_total = 0;
 
-    const double epsilon = 1e-6;
-
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
             const size_t index = k*T + t;
             const double err_abs_diff = abs((double) (bw1.observations[index] - bw2.observations[index]));
-            if ( ! ( err_abs_diff < epsilon ) ) { 
+            if ( ! ( err_abs_diff < EPSILON ) ) { 
                 errors_local++;
             }
         }
@@ -538,7 +535,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
    for(size_t n = 0; n < N; n++) {
         const size_t index = n;
         const double err_abs_diff = abs(bw1.init_prob[index] - bw2.init_prob[index]);
-        if ( ! ( err_abs_diff < epsilon ) ) { 
+        if ( ! ( err_abs_diff < EPSILON ) ) { 
             errors_local++;
         }
     }
@@ -554,7 +551,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
         for(size_t n1 = 0; n1 < N; n1++) {
             const size_t index = n0*N + n1;
             const double err_abs_diff = abs(bw1.trans_prob[index] - bw2.trans_prob[index]);
-            if ( ! ( err_abs_diff < epsilon ) ) { 
+            if ( ! ( err_abs_diff < EPSILON ) ) { 
                 errors_local++;
             }
         }
@@ -572,7 +569,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
         for(size_t m = 0; m < M; m++) {
             const size_t index = n*M + m;
             const double err_abs_diff = abs(bw1.emit_prob[index] - bw2.emit_prob[index]);
-            if ( ! ( err_abs_diff < epsilon ) ) { 
+            if ( ! ( err_abs_diff < EPSILON ) ) { 
                 errors_local++;
             }
         }
@@ -588,7 +585,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
     for (size_t it = 0; it < max_iterations; it++) {
         const size_t index = it;
         const double err_abs_diff = abs(bw1.neg_log_likelihoods[index] - bw2.neg_log_likelihoods[index]);
-        if ( ! ( err_abs_diff < epsilon ) ) { 
+        if ( ! ( err_abs_diff < EPSILON ) ) { 
             errors_local++;
         }
     }
@@ -602,7 +599,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
         for (size_t t = 0; t < T; t++) {
             const size_t index = k*T + t;
             const double err_abs_diff = abs(bw1.c_norm[index] - bw2.c_norm[index]);
-            if ( ! ( err_abs_diff < epsilon ) ) { 
+            if ( ! ( err_abs_diff < EPSILON ) ) { 
                 errors_local++;
             }
         }
@@ -618,7 +615,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
             for (size_t n = 0; n < N; n++) {
                 const size_t index = (k*T + t)*N + n;
                 const double err_abs_diff = abs(bw1.alpha[index] - bw2.alpha[index]);
-                if ( ! ( err_abs_diff < epsilon ) ) { 
+                if ( ! ( err_abs_diff < EPSILON ) ) { 
                     errors_local++;
                 }
             }
@@ -635,7 +632,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
             for (size_t n = 0; n < N; n++) {
                 const size_t index = (k*T + t)*N + n;
                 const double err_abs_diff = abs(bw1.beta[index] - bw2.beta[index]);
-                if ( ! ( err_abs_diff < epsilon ) ) { 
+                if ( ! ( err_abs_diff < EPSILON ) ) { 
                     errors_local++;
                 }
             }
@@ -652,7 +649,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
             for (size_t n = 0; n < N; n++) {
                 const size_t index = (k*T + t)*N + n;
                 const double err_abs_diff = abs(bw1.ggamma[index] - bw2.ggamma[index]);
-                if ( ! ( err_abs_diff < epsilon ) ) { 
+                if ( ! ( err_abs_diff < EPSILON ) ) { 
                     errors_local++;
                 }
             }
@@ -668,7 +665,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
         for (size_t n = 0; n < N; n++) {
             const size_t index = k*N + n;
             const double err_abs_diff = abs(bw1.gamma_sum[index] - bw2.gamma_sum[index]);
-            if ( ! ( err_abs_diff < epsilon ) ) { 
+            if ( ! ( err_abs_diff < EPSILON ) ) { 
                 errors_local++;
             }
         }
@@ -685,7 +682,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
                 for(size_t n1 = 0; n1 < N; n1++) {
                     const size_t index =((k*T + t)*N + n0)*N + n1;
                     const double err_abs_diff = abs(bw1.sigma[index] - bw2.sigma[index]);
-                    if ( ! ( err_abs_diff < epsilon ) ) { 
+                    if ( ! ( err_abs_diff < EPSILON ) ) { 
                         errors_local++;
                     }
                 }
@@ -703,7 +700,7 @@ inline bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
             for (size_t n1 = 0; n1 < N; n1++) {
                 const size_t index = (k*N + n0)*N + n1;
                 const double err_abs_diff = abs(bw1.sigma_sum[index] - bw2.sigma_sum[index]);
-                if ( ! ( err_abs_diff < epsilon ) ) { 
+                if ( ! ( err_abs_diff < EPSILON ) ) { 
                     errors_local++;
                 }
             }
