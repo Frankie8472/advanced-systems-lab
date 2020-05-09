@@ -44,11 +44,8 @@ N >= 16 and divisible by 16
 M >= 16 and divisible by 16
 
 This is sufficiently large to take most to all optimization possibilities into account. Note that T is sometimes used as follows: "0 <= t <= T-2" and "1 <= t <= T-1".
-
 Furthermore, to check equality for doubles, we use EPSILON 1e-6, to not get caught up in numerical instabilities and other sources of randomness.
-
 Lastly, we omitted the convergence criterion by the minimization of the monotonously decreasing negative log likelihood sequence, because it adds an unnecessary source of randomness.
-
 Note that Expectation-Maximization is provably guaranteed to not change after convergence, so running more than fewer iterations causes no harm, except for overfitting (irrelevant for our purposes) and increased runtime (wanted for benchmarking).
 
 ## Verification
@@ -56,13 +53,8 @@ Note that Expectation-Maximization is provably guaranteed to not change after co
 ### Baseline
 
 We have "test_case_ghmm_x" functions to check against hardcoded examples that were verified using the Python 2.x, Linux only ghmm library.
-
 For reproducibility purposes, the code can be found in misc/asl_baum_welch_ghmm_experiments.ipynb (jupyter notebook) or, alternatively, misc/asl_baum_welch_ghmm_experiments.py.
-
-ghmm documentation http://ghmm.sourceforge.net/index.html
-
-Download link (working as of 09.05.2020) https://sourceforge.net/projects/ghmm/
-
+ghmm documentation http://ghmm.sourceforge.net/index.html and download link (working as of 09.05.2020) https://sourceforge.net/projects/ghmm/
 Note that Python 3 does not work with ghmm and to install the library, there are quite some dependencies to take into account.
 
 ### Wikipedia Example
