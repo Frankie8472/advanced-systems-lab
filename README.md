@@ -39,22 +39,50 @@ Starting with a baseline version, we implement various optimizations to signific
 ## Assumptions
 
 K >= 16 and divisible by 16
-T >= 16 and divisible by 16
+
+T >= 17 and divisible by 17
+
 N >= 16 and divisible by 16
+
 M >= 16 and divisible by 16
 
 This is sufficiently large to take most to all optimization possibilities into account.
 
+Furthermore, to check equality for doubles, we use EPSILON 1e-6, to not get caught up in numerical instabilities and other sources of randomness.
+
+Lastly, we omitted the convergence criterion by the minimization of the monotonously decreasing negative log likelihood sequence, because it adds an unnecessary source of randomness.
+Note that Expectation-Maximization is provably guaranteed to not change after convergence, so running more than fewer iterations causes no harm, except for overfitting (irrelevant for our purposes) and increased runtime (wanted for benchmarking).
+
 ## Verification
 
-We have some explicit test cases, which are marked as "test_case_x" that only check the baseline, as the assumptions above may (safely) be violated.
+### Baseline
 
-For the optimizations, we do the following
+We have "test_case_ghmm_x" functions to check against hardcoded examples that were verified using the Python 2.x, Linux only ghmm library ( http://ghmm.sourceforge.net/index.html and download https://sourceforge.net/projects/ghmm/ ).
+
+For reproducibility purposes, the code can be found in misc/asl_baum_welch_ghmm_experiments.ipynb (jupyter notebook) or, alternatively, misc/asl_baum_welch_ghmm_experiments.py.
+
+Note that Python 3 does not work with ghmm and to install the library, there are quite some dependencies to take into account.
+
+### Wikipedia Example
+
+We talked about the Wikipedia example ( https://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm#Example ) during the meeting.
+The example uses a joint probability factorization into conditional probabilities and usage of the likelihood to compute one "iteration".
+This has nothing to do with the actual Baum-Welch algorithm described on this very same page. It is confusing and misleading. And it cost me DAYS.
+
+The example is still used as "test_case_ghmm_0" and "test_case_ghmm_1", though obviously compared against Baum-Welch implementations.
+And as it can be seen, not only in the verifications, but also in misc/BaumWelchWikipediaExample.xlsx
+and the Matlab implementation ( https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/ ) that corresponds to the Tutorial 
+( https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/tutorial.pdf ) linked on the ASL website for Baum-Welch project:
+
+Our approach is absolutely correct and thoroughly verified for the project's scope and purpose!
+
+### Optimizations
+
 1. Randomly initialize K, N, M, T, observations, init_prob, trans_prob and emit_prob, by generating random numbers and normalize where needed.
-2. Run the baseline implementation until convergence or max_iterations.
-3. Check whether the sequence of the negative log likelihood is monotonously decreasing in each iteration, which is guaranteed by the expectation-maximization algorithm.
+2. Run the baseline implementation for max_iterations.
+3. Check whether the sequence of the negative log likelihood is monotonously decreasing in each iteration, which is guaranteed by the expectation-maximization algorithm and shows correctness of the (unscaled) Baum-Welch algorithm conceptually.
 4. Check whether the rows of init_prob, trans_prob and emit_prob sum to 1.0 each, as they represent (learned) probability distributions, both before and after the run. 
-5. For each optimization: Run until convergence or max_iterations and check the probability tables of init_prob, trans_prob and emit_prob against the corresponding ones from the baseline.
+5. For each optimization: Do the same as 2., 3. and 4. and additionally check the resulting probability tables of init_prob, trans_prob and emit_prob directly with the corresponding ones from the baseline implementation.
 
 ## Implementations
 
@@ -83,6 +111,7 @@ REGISTER_FUNCTION(func_name, "A description about the implementation");
 Implementation of the Baum-Welch algorithm with scaling taken into account for numerical stability.
 
 Main references used
+
 https://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm
 
 https://courses.media.mit.edu/2010fall/mas622j/ProblemSets/ps4/tutorial.pdf

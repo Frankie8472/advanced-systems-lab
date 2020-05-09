@@ -37,6 +37,8 @@ REGISTER_FUNCTION(comp_bw_scalar_reorder, "Scalar Optimized: reorder calculation
 size_t comp_bw_scalar_reorder(const BWdata& bw){
 
     size_t iter = 0;
+
+    // run for all iterations
     double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
     for (size_t i = 0; i < bw.max_iterations; i++) {
         iter++;
@@ -56,13 +58,6 @@ size_t comp_bw_scalar_reorder(const BWdata& bw){
             }
         }
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
-
-        // convergence criterion
-        if (i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12) break;
-
-        neg_log_likelihood_sum_old = neg_log_likelihood_sum;
-
-        //print_states(bw);
     }
 
     return iter;

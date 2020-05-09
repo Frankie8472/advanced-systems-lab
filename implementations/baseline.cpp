@@ -41,6 +41,7 @@ size_t comp_bw(const BWdata& bw){
 
     size_t iter = 0;
 
+    // run for all iterations
     for (size_t i = 0; i < bw.max_iterations; i++) {
 
         iter++;
@@ -60,11 +61,6 @@ size_t comp_bw(const BWdata& bw){
             }
         }
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
-
-        // convergence criterion
-        if (i > 0 && abs(bw.neg_log_likelihoods[i] - bw.neg_log_likelihoods[i-1]) < 1e-12) break;
-
-        //print_states(bw);
     }
 
     return iter;
