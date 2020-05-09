@@ -151,10 +151,10 @@ int main(int argc, char **argv) {
     // randomize seed
     srand(time(NULL));
 
-    const size_t K = 28; // number of observation sequences / training datasets
-    const size_t N = 28; // number of hidden state variables
-    const size_t M = 28; // number of observations
-    const size_t T = 28; // number of time steps
+    const size_t K = 24; // number of observation sequences / training datasets
+    const size_t N = 24; // number of hidden state variables
+    const size_t M = 24; // number of observations
+    const size_t T = 26; // number of time steps
     if ( argc != 2 ) {
         printf("usage: %s <max_iterations>\n", argv[0]);
         return -1;
