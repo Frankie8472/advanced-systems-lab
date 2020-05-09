@@ -98,7 +98,7 @@ inline void check_user_functions(const size_t nb_random_tests) {
         // we assume sufficiently high (>= 16) values
         // NOTE
         // we assume divisibility of (16)
-        // T >= 17 & divisible by 17, due to "T-2" loops
+        // T = 2 (mod 16), due to "1 to T-2" loops in compute_gamma
         const size_t K = (rand() % 2)*16 + 16;
         const size_t N = (rand() % 3)*16 + 16;
         const size_t M = (rand() % 3)*16 + 16;
