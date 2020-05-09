@@ -1,4 +1,3 @@
-
 # Advanced Systems Lab (How to Write Fast Numerical Code) - Spring 2020
 Semester Project: Baum-Welch algorithm
 
@@ -40,7 +39,7 @@ Starting with a baseline version, we implement various optimizations to signific
 
 K >= 16 and divisible by 16
 
-T >= 17 and divisible by 17
+T >= 18 and congruent to 2 modulo 16 [T = 2 (mod 16)]
 
 N >= 16 and divisible by 16
 
