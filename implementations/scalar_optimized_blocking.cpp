@@ -36,7 +36,7 @@ size_t innermost_block_size = 8;
 size_t innermost_block_size_minus_one = innermost_block_size - 1;
 
 
-REGISTER_FUNCTION(comp_bw_scalar_blocking, "Scalar Optimized: Blocking");
+REGISTER_FUNCTION(comp_bw_scalar_blocking, "scalar-blocking", "Scalar Optimized: Blocking");
 
 
 size_t comp_bw_scalar_blocking(const BWdata& bw){

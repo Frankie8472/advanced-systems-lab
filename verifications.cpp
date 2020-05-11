@@ -179,9 +179,9 @@ inline void check_user_functions(const size_t nb_random_tests) {
 
         printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
         if(nb_fails == 0){
-            printf("\x1b[1;32mALL CASES PASSED:\x1b[0m '%s'\n", FuncRegister::func_names->at(f).c_str());
+            printf("\x1b[1;32mALL CASES PASSED:\x1b[0m '%s': %s\n", FuncRegister::func_names->at(f).c_str(), FuncRegister::func_descs->at(f).c_str());
         } else {
-            printf("\x1b[1;31m[%zu/%zu] CASES FAILED:\x1b[0m    '%s' \n", nb_fails, nb_random_tests, FuncRegister::func_names->at(f).c_str());
+            printf("\x1b[1;31m[%zu/%zu] CASES FAILED:\x1b[0m '%s': %s \n", nb_fails, nb_random_tests, FuncRegister::func_names->at(f).c_str(), FuncRegister::func_descs->at(f).c_str());
         }
         printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
         for (size_t i = 0; i < nb_random_tests; i++) {

@@ -20,6 +20,8 @@
 #include <time.h>
 #include <climits>
 #include <vector>
+#include <set>
+#include <getopt.h>
 // custom files for the project
 #include "tsc_x86.h"
 #include "helper_utilities.h"
@@ -89,7 +91,6 @@ void perf_test(compute_bw_func func, const BWdata& bw){
 
 #endif
     // Actual performance measurements repeated REP times.
-    printf("num_runs: %zu\n", num_runs);
 
     double total_cycles = 0;
     size_t iter;
@@ -145,20 +146,72 @@ void perf_test(compute_bw_func func, const BWdata& bw){
     //print_states(bw);
 }
 
+static struct option arg_options[] = {
+        {"test", no_argument, NULL, 't'}, 
+        {"only", required_argument, NULL, 'o'},
+        {"list", no_argument, NULL, 'l'},
+        {"max-iteration", required_argument, NULL, 1},
+        {"help", no_argument, NULL, 'h'},
+        {0, 0, 0, 0}
+    };
 
 int main(int argc, char **argv) {
     // randomize seed
     srand(time(NULL));
+    
+    std::set<std::string> sel_impl;
+    std::string arg;
+    
+    const size_t K = (rand() % 2)*16 + 16; // number of observation sequences / training datasets
+    const size_t N = (rand() % 3)*16 + 16; // number of hidden state variables
+    const size_t M = (rand() % 3)*16 + 16; // number of observations
+    const size_t T = (rand() % 4)*16 + 18; // number of time steps
+    size_t max_iterations = 100;
+    
+    // Parse arguments
+    while(true){
+        int c = getopt_long(argc, argv, "tho:", arg_options, NULL);
 
-    const size_t K = 32; // number of observation sequences / training datasets
-    const size_t N = 32; // number of hidden state variables
-    const size_t M = 32; // number of observations
-    const size_t T = 34; // number of time steps
-    if ( argc != 2 ) {
-        printf("usage: %s <max_iterations>\n", argv[0]);
-        return -1;
+        if (c == -1)
+            break;
+
+        switch(c){
+            case 'o':
+                arg = optarg;
+                sel_impl.insert(arg);
+                break;
+            case 't':
+                printf("This option is not yet implemented.\n");
+                printf(":(\n");
+                exit(-2);
+            case 'l':
+                printf("Registered functions:\n");
+                FuncRegister::printRegisteredFuncs();
+                exit(0);
+            case 1:
+                max_iterations = atoi(optarg);
+                break;
+            case 'h':
+                printf("Usage: %s [--test] [--only <name>] [--list] [--help]\n", argv[0]);
+                printf("Benchmarks the registered implementations against the registered baseline.\n\n");
+                printf("  -h, --help\t\t\tPrints this message and exits\n");
+                printf("  -t, --test\t\t\tPerform test that can be used for the report (Not yet implemented)\n");
+                printf("  -o, --only <name>\t\tOnly execute the implementation with the given name (case-sensitive). "
+                                 "\n  \t\t\t\t Can occur multiple times and is compatible with --test. The baseline is"
+                                 "\n  \t\t\t\t always run.\n");
+                printf("      --list\t\t\tLists all available implementations and exits\n");
+                printf("      --max-iteration <value>\tSets the max-iteration to a value\n");
+                exit(0);
+            case '?':
+                exit(-1);
+            default:
+                printf("argument not supported\n");
+                break;
+        }
+
     }
-    const size_t max_iterations = atoi(argv[1]);
+    
+    printf("Benchmarking with K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
 
     flops = 2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 5*K*N + K + 2*N*M*K + K*T + N + N*M;
     
@@ -174,11 +227,15 @@ int main(int argc, char **argv) {
     
     const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);
-    printf("\nRunning: %s\n", FuncRegister::baseline_name.c_str());
+    printf("Running: %s\n", FuncRegister::baseline_name.c_str());
     perf_test(FuncRegister::baseline_func, bw);
+    printf("\n");
     for(size_t i = 0; i < FuncRegister::size(); i++){
-        printf("\nRunning: %s\n", FuncRegister::func_names->at(i).c_str());
-        perf_test(FuncRegister::user_funcs->at(i), bw);
+        if(sel_impl.empty() || sel_impl.find(FuncRegister::func_names->at(i)) != sel_impl.end()){
+            printf("Running: %s: %s\n", FuncRegister::func_names->at(i).c_str(), FuncRegister::func_descs->at(i).c_str());
+            perf_test(FuncRegister::user_funcs->at(i), bw);
+            printf("\n");
+        }
     }
     clean_BWdata(bw);
 

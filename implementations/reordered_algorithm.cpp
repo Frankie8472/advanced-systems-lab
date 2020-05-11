@@ -31,7 +31,7 @@ static void update_emit_prob_jc(const BWdata& bw);
 static size_t comp_bw_scalar_jc1(const BWdata& bw);
 
 
-REGISTER_FUNCTION(comp_bw_scalar_jc1, "Reordering of the computation in the algorithm");
+REGISTER_FUNCTION(comp_bw_scalar_jc1, "jc-reordered", "Reordering of the computation in the algorithm");
 
 
 size_t comp_bw_scalar_jc1(const BWdata& bw){

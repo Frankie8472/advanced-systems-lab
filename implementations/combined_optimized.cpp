@@ -31,7 +31,7 @@ void update_emit_prob(const BWdata& bw);
 size_t comp_bw_combined(const BWdata& bw);
 
 
-REGISTER_FUNCTION(comp_bw_combined, "TODO: Combined Optimized");
+REGISTER_FUNCTION(comp_bw_combined, "combined", "TODO: Combined Optimized");
 
 
 size_t comp_bw_combined(const BWdata& bw){

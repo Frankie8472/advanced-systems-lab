@@ -31,7 +31,7 @@ void update_emit_prob(const BWdata& bw);
 size_t comp_bw_scalar_reorder(const BWdata& bw);
 
 
-REGISTER_FUNCTION(comp_bw_scalar_reorder, "Scalar Optimized: reorder calculations");
+REGISTER_FUNCTION(comp_bw_scalar_reorder, "scalar-reorder", "Scalar Optimized: reorder calculations");
 
 
 size_t comp_bw_scalar_reorder(const BWdata& bw){

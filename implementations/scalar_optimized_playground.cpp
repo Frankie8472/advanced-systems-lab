@@ -31,7 +31,7 @@ void update_emit_prob(const BWdata& bw);
 size_t comp_bw_scalar_play(const BWdata& bw);
 
 
-REGISTER_FUNCTION(comp_bw_scalar_play, "Scalar Optimized: for testing things out");
+REGISTER_FUNCTION(comp_bw_scalar_play, "scalar-play", "Scalar Optimized: for testing things out");
 
 
 size_t comp_bw_scalar_play(const BWdata& bw){

@@ -301,14 +301,9 @@ public:
      */
     static void set_baseline(compute_bw_func f, std::string name);
 
-    static void add_function(compute_bw_func f, std::string name);
+    static void add_function(compute_bw_func f, std::string name, std::string description);
     
-    static void printRegisteredFuncs()
-    {
-        for(size_t i = 0; i < size(); i++){
-            printf("%s at %p\n", (*func_names).at(i).c_str(), (*user_funcs).at(i));
-        }
-    }
+    static void printRegisteredFuncs();
 
     static size_t size()
     {
@@ -317,22 +312,23 @@ public:
     
     static std::vector<compute_bw_func> *user_funcs;
     static std::vector<std::string> *func_names;
+    static std::vector<std::string> *func_descs;
     static compute_bw_func baseline_func;
     static std::string baseline_name;
 };
 
 // Macro to register a function and a name that should be executed
-#define REGISTER_FUNCTION(f, name)                                \
+#define REGISTER_FUNCTION(f, name, description)                   \
     static struct f##_                                            \
     {                                                             \
         f##_()                                                    \
         {                                                         \
-            FuncRegister::add_function(f, name);                  \
+            FuncRegister::add_function(f, name, description);     \
         }                                                         \
     } f##__BW_;
 
 // Macro to register a function and a name that should be executed
-#define SET_BASELINE(f, name)                                \
+#define SET_BASELINE(f, name)                                     \
     static struct f##_                                            \
     {                                                             \
         f##_()                                                    \

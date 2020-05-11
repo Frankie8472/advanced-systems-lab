@@ -31,7 +31,7 @@ void update_emit_prob(const BWdata& bw);
 size_t comp_bw_vector(const BWdata& bw);
 
 
-REGISTER_FUNCTION(comp_bw_vector, "TODO: Vector Optimized");
+REGISTER_FUNCTION(comp_bw_vector, "vector", "TODO: Vector Optimized");
 
 
 size_t comp_bw_vector(const BWdata& bw){
