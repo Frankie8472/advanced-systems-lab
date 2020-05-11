@@ -106,10 +106,10 @@ inline void check_user_functions(const size_t nb_random_tests) {
         const size_t max_iterations = 100;
 
         // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
-        const BWdata& bw_baseline_initialized = create_BWdata(K, N, M, T, max_iterations);
+        const BWdata& bw_baseline_initialized = *new BWdata(K, N, M, T, max_iterations);
         //initialize_uar(bw_baseline_initialized); // converges fast, but works now.
         initialize_random(bw_baseline_initialized);
-        const BWdata& bw_baseline = full_copy_BWdata(bw_baseline_initialized);
+        const BWdata& bw_baseline = bw_baseline_initialized.deep_copy();
 
         // run baseline and don't touch the bw_baseline data:
         // each of the users function bw_user_function data in
@@ -132,7 +132,7 @@ inline void check_user_functions(const size_t nb_random_tests) {
 
             printf("Running User Function \x1b[1m'%s'\x1b[0m\n", FuncRegister::func_names->at(f).c_str());
             printf("-------------------------------------------------------------------------------\n");
-            const BWdata& bw_user_function = full_copy_BWdata(bw_baseline_initialized);
+            const BWdata& bw_user_function = bw_baseline_initialized.deep_copy();
             const size_t user_function_convergence = FuncRegister::user_funcs->at(f)(bw_user_function);
             printf("It took \x1b[1m[%zu] iterations\x1b[0m to converge\n", user_function_convergence);
             printf("-------------------------------------------------------------------------------\n");
@@ -160,11 +160,11 @@ inline void check_user_functions(const size_t nb_random_tests) {
                 && ( false || ( user_function_sucess == baseline_sucess ) )
             );
 
-            clean_BWdata(bw_user_function);
+            delete &bw_user_function;
         }
 
-        clean_BWdata(bw_baseline);
-        clean_BWdata(bw_baseline_initialized);
+        delete &bw_baseline;
+        delete &bw_baseline_initialized;
     }
 
     printf("\nAll Tests Done!\n\n");
@@ -211,8 +211,8 @@ bool test_case_ghmm_0(compute_bw_func func) {
     const size_t T = 10;
     const size_t max_iterations = 1; 
 
-    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
-    const BWdata& bw_check = create_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw_check = *new BWdata(K, N, M, T, max_iterations);
 
     bw.observations[0*T + 0] = 0;
     bw.observations[0*T + 1] = 0;
@@ -263,8 +263,8 @@ bool test_case_ghmm_0(compute_bw_func func) {
 
     //print_states(bw);
 
-    clean_BWdata(bw);
-    clean_BWdata(bw_check);
+    delete &bw;
+    delete &bw_check;
 
     return success;
 }
@@ -278,8 +278,8 @@ bool test_case_ghmm_1(compute_bw_func func) {
     const size_t T = 10;
     const size_t max_iterations = 1000;
 
-    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
-    const BWdata& bw_check = create_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw_check = *new BWdata(K, N, M, T, max_iterations);
 
     bw.observations[0*T + 0] = 0;
     bw.observations[0*T + 1] = 0;
@@ -328,8 +328,8 @@ bool test_case_ghmm_1(compute_bw_func func) {
 
     //print_states(bw);
 
-    clean_BWdata(bw);
-    clean_BWdata(bw_check);
+    delete &bw;
+    delete &bw_check;
 
     return success;
 }
@@ -343,8 +343,8 @@ bool test_case_ghmm_2(compute_bw_func func) {
     const size_t T = 16;
     const size_t max_iterations = 1;
 
-    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
-    const BWdata& bw_check = create_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw_check = *new BWdata(K, N, M, T, max_iterations);
 
     bw.observations[0*T + 0] = 2;
     bw.observations[0*T + 1] = 1;
@@ -421,8 +421,8 @@ bool test_case_ghmm_2(compute_bw_func func) {
 
     //print_states(bw);
 
-    clean_BWdata(bw);
-    clean_BWdata(bw_check);
+    delete &bw;
+    delete &bw_check;
 
     return success;
 }
@@ -440,8 +440,8 @@ bool test_case_ghmm_3(compute_bw_func func) {
     // to better values
     const size_t max_iterations = 93;
 
-    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
-    const BWdata& bw_check = create_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw_check = *new BWdata(K, N, M, T, max_iterations);
 
     bw.observations[0*T + 0] = 2;
     bw.observations[0*T + 1] = 1;
@@ -518,8 +518,8 @@ bool test_case_ghmm_3(compute_bw_func func) {
 
     //print_states(bw);
 
-    clean_BWdata(bw);
-    clean_BWdata(bw_check);
+    delete &bw;
+    delete &bw_check;
 
     return success;
 }

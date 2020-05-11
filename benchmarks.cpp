@@ -70,7 +70,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
     do {
         num_runs = num_runs * multiplier;
         for(size_t i = 0; i < num_runs; i++){
-            bw_data.push_back(&copy_BWdata(bw));
+            bw_data.push_back(&bw.deep_copy());
         }
 
         start = start_tsc();
@@ -81,7 +81,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
         end = stop_tsc(start);
 
         for(size_t i = 0; i < num_runs; i++){
-            clean_BWdata(*bw_data.at(i));
+            delete bw_data.at(i);
         }
         bw_data.clear();
         cycles = (double)end;
@@ -99,7 +99,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
         iter = 0;
         // Create all copies for all runs of the function
         for(size_t i = 0; i < num_runs; i++){
-            bw_data.push_back(&copy_BWdata(bw));
+            bw_data.push_back(&bw.deep_copy());
         }
         
         // Measure function
@@ -111,7 +111,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
         
         // Clean up all copies
         for(size_t i = 0; i < num_runs; i++){
-            clean_BWdata(*bw_data.at(i));
+            delete bw_data.at(i);
         }
         bw_data.clear();
         
@@ -162,10 +162,10 @@ int main(int argc, char **argv) {
     std::set<std::string> sel_impl;
     std::string arg;
     
-    const size_t K = (rand() % 2)*16 + 16; // number of observation sequences / training datasets
-    const size_t N = (rand() % 3)*16 + 16; // number of hidden state variables
-    const size_t M = (rand() % 3)*16 + 16; // number of observations
-    const size_t T = (rand() % 4)*16 + 18; // number of time steps
+    const size_t K = 16; // number of observation sequences / training datasets
+    const size_t N = 16; // number of hidden state variables
+    const size_t M = 16; // number of observations
+    const size_t T = 18; // number of time steps
     size_t max_iterations = 100;
     
     // Parse arguments
@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
     fp_cost += 1*T*N*N;
     */
     
-    const BWdata& bw = create_BWdata(K, N, M, T, max_iterations);
+    const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);
     printf("Running: %s\n", FuncRegister::baseline_name.c_str());
     perf_test(FuncRegister::baseline_func, bw);
@@ -237,6 +237,6 @@ int main(int argc, char **argv) {
             printf("\n");
         }
     }
-    clean_BWdata(bw);
+    delete &bw;
 
 }
