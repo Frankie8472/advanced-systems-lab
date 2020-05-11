@@ -21,6 +21,7 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <stdlib.h>
 
 #define EPSILON 1e-6
 
@@ -62,18 +63,18 @@ struct BWdata {
            const size_t T,
            const size_t max_iterations):
             K(K), N(N), M(M), T(T), max_iterations(max_iterations), full_copy(true){
-        init_prob = (double *)alligned_alloc(32, N * sizeof(double));
-        trans_prob = (double *)alligned_alloc(32, N*N * sizeof(double));
-        emit_prob = (double *)alligned_alloc(32, N*M * sizeof(double));
-        observations = (size_t *)alligned_alloc(32, K*T * sizeof(size_t));
-        neg_log_likelihoods = (double *)alligned_alloc(32 * max_iterations, sizeof(double));
-        c_norm = (double *)alligned_alloc(32, K*T * sizeof(double));
-        alpha = (double *)alligned_alloc(32, K*T*N * sizeof(double));
-        beta = (double *)alligned_alloc(32, K*T*N * sizeof(double));
-        ggamma = (double *)alligned_alloc(32, K*T*N * sizeof(double));
-        sigma = (double *)alligned_alloc(32,K*T*N*N * sizeof(double));
-        gamma_sum = (double *)alligned_alloc(32, K*N * sizeof(double));
-        sigma_sum = (double *)alligned_alloc(32, K*N*N * sizeof(double));
+        init_prob = (double *)aligned_alloc(32, N * sizeof(double));
+        trans_prob = (double *)aligned_alloc(32, N*N * sizeof(double));
+        emit_prob = (double *)aligned_alloc(32, N*M * sizeof(double));
+        observations = (size_t *)aligned_alloc(32, K*T * sizeof(size_t));
+        neg_log_likelihoods = (double *)aligned_alloc(32, max_iterations * sizeof(double));
+        c_norm = (double *)aligned_alloc(32, K*T * sizeof(double));
+        alpha = (double *)aligned_alloc(32, K*T*N * sizeof(double));
+        beta = (double *)aligned_alloc(32, K*T*N * sizeof(double));
+        ggamma = (double *)aligned_alloc(32, K*T*N * sizeof(double));
+        sigma = (double *)aligned_alloc(32,K*T*N*N * sizeof(double));
+        gamma_sum = (double *)aligned_alloc(32, K*N * sizeof(double));
+        sigma_sum = (double *)aligned_alloc(32, K*N*N * sizeof(double));
 
         if (observations == NULL) exit(2);
         if (init_prob == NULL) exit(2);
@@ -93,9 +94,9 @@ struct BWdata {
      * Creates a copy of a BWdata.
      */
     BWdata(const BWdata& other): K(other.K), N(other.N), M(other.M), T(other.T), max_iterations(other.max_iterations), full_copy(false){
-        init_prob = (double *)alligned_alloc(32, N *sizeof(double));
-        trans_prob = (double *)alligned_alloc(32, N*N * sizeof(double));
-        emit_prob = (double *)alligned_alloc(32, N*M * sizeof(double));
+        init_prob = (double *)aligned_alloc(32, N *sizeof(double));
+        trans_prob = (double *)aligned_alloc(32, N*N * sizeof(double));
+        emit_prob = (double *)aligned_alloc(32, N*M * sizeof(double));
         observations = other.observations;
         neg_log_likelihoods = other.neg_log_likelihoods;
         c_norm = other.c_norm;

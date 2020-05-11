@@ -190,6 +190,10 @@ int main(int argc, char **argv) {
                 exit(0);
             case 1:
                 max_iterations = atoi(optarg);
+                if(max_iterations % 4 != 0){
+                    printf("Error: max_iterations needs to be divisable by 4\n");
+                    exit(-1);
+                }
                 break;
             case 'h':
                 printf("Usage: %s [OPTIONS]\n", argv[0]);
