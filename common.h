@@ -22,6 +22,8 @@
 #include <cstring>
 #include <vector>
 
+#define EPSILON 1e-6
+
 struct BWdata {
     const size_t K;  // number of observation sequences / training datasets
     const size_t N;  // number of hidden state variables

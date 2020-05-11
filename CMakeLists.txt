@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-variable -O3")
 
 add_executable(verification
     common.cpp
+    helper_utilities.cpp
     verifications.cpp
     implementations/baseline.cpp
     implementations/reordered_algorithm.cpp
@@ -18,6 +19,7 @@ add_executable(verification
 
 add_executable(benchmarks
     common.cpp
+    helper_utilities.cpp
     benchmarks.cpp
     implementations/baseline.cpp
     implementations/reordered_algorithm.cpp
