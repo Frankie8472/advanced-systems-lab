@@ -162,10 +162,10 @@ int main(int argc, char **argv) {
     std::set<std::string> sel_impl;
     std::string arg;
     
-    const size_t K = 16; // number of observation sequences / training datasets
-    const size_t N = 16; // number of hidden state variables
-    const size_t M = 16; // number of observations
-    const size_t T = 18; // number of time steps
+    const size_t K = (rand() % 2)*16 + 16; // number of observation sequences / training datasets
+    const size_t N = (rand() % 3)*16 + 16; // number of hidden state variables
+    const size_t M = (rand() % 3)*16 + 16; // number of observations
+    const size_t T = (rand() % 4)*16 + 18; // number of time steps
     size_t max_iterations = 100;
     
     // Parse arguments
@@ -192,8 +192,9 @@ int main(int argc, char **argv) {
                 max_iterations = atoi(optarg);
                 break;
             case 'h':
-                printf("Usage: %s [--test] [--only <name>] [--list] [--help]\n", argv[0]);
+                printf("Usage: %s [OPTIONS]\n", argv[0]);
                 printf("Benchmarks the registered implementations against the registered baseline.\n\n");
+                printf("Options:\n");
                 printf("  -h, --help\t\t\tPrints this message and exits\n");
                 printf("  -t, --test\t\t\tPerform test that can be used for the report (Not yet implemented)\n");
                 printf("  -o, --only <name>\t\tOnly execute the implementation with the given name (case-sensitive). "
