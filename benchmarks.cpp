@@ -27,13 +27,11 @@
 #include "helper_utilities.h"
 #include "common.h"
 
-
 #define NUM_RUNS 100
 #define CYCLES_REQUIRED 1e8
 #define FREQUENCY 2.2e9
 #define CALIBRATE 1
 #define REP 20
-
 
 /*
 Cost analysis (add, mul and div is one flop)
@@ -51,7 +49,6 @@ total: (1 add + 1 mul)*K*N²*T + (2 add + 5 muls)*K*N²*(T-1) + (2 adds)*K*N² +
 */
 
 int flops;
-
 
 void perf_test(compute_bw_func func, const BWdata& bw){
 
@@ -124,7 +121,6 @@ void perf_test(compute_bw_func func, const BWdata& bw){
     total_cycles /= REP;
     total_iter /= REP;
 
-
     cycles = total_cycles;
     iter = total_iter;
     perf =  round((100.0 * iter*flops) / cycles) / 100.0;
@@ -132,18 +128,6 @@ void perf_test(compute_bw_func func, const BWdata& bw){
     printf("Iterations: %ld\n", iter);
     printf("Cycles: %f\n", round(cycles));
     printf("Performance: %f\n", perf);
-
-    /*
-    printf("\n");
-    printf("(%d, %f)\n", max_iterations, fp_cost / (double) cycles);
-    printf("(%d, %f)\n", N, fp_cost / (double) cycles);
-    printf("(%d, %f)\n", M, fp_cost / (double) cycles);
-    printf("(%d, %f)\n", T, fp_cost / (double) cycles);
-    printf("\n");
-    */
-
-    //check_and_verify(bw);
-    //print_states(bw);
 }
 
 static struct option arg_options[] = {
@@ -156,18 +140,22 @@ static struct option arg_options[] = {
     };
 
 int main(int argc, char **argv) {
+
     // randomize seed
     srand(time(NULL));
-    
+
     std::set<std::string> sel_impl;
     std::string arg;
-    
-    const size_t K = (rand() % 2)*16 + 16; // number of observation sequences / training datasets
-    const size_t N = (rand() % 3)*16 + 16; // number of hidden state variables
-    const size_t M = (rand() % 3)*16 + 16; // number of observations
-    const size_t T = (rand() % 4)*16 + 18; // number of time steps
+
+    // no need for variable size randomness in benchmarks
+    // NOTE: Please choose a nonzero multiple of 16 (and 32 for T)
+    const size_t K = 16;
+    const size_t N = 16;
+    const size_t M = 16;
+    const size_t T = 32;
+    // adjust max_iterations if it's too slow
     size_t max_iterations = 100;
-    
+
     // Parse arguments
     while(true){
         int c = getopt_long(argc, argv, "tho:", arg_options, NULL);
@@ -215,21 +203,11 @@ int main(int argc, char **argv) {
         }
 
     }
-    
+
     printf("Benchmarking with K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
 
     flops = 2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 5*K*N + K + 2*N*M*K + K*T + N + N*M;
-    
-    /*
-    unsigned int fp_cost = 0;
-    fp_cost += 1*T;
-    fp_cost += 1*N;
-    fp_cost += 1*N*N;
-    fp_cost += 1*N*M;
-    fp_cost += 3*T*N;
-    fp_cost += 1*T*N*N;
-    */
-    
+
     const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);
     printf("Running: %s\n", FuncRegister::baseline_name.c_str());
@@ -243,5 +221,4 @@ int main(int argc, char **argv) {
         }
     }
     delete &bw;
-
 }

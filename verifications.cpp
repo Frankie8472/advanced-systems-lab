@@ -99,10 +99,10 @@ inline void check_user_functions(const size_t nb_random_tests) {
         // NOTE
         // we assume divisibility of (16)
         // T = 2 (mod 16), due to "1 to T-2" loops in compute_gamma
-        const size_t K = (rand() % 2)*16 + 16;
-        const size_t N = (rand() % 3)*16 + 16;
-        const size_t M = (rand() % 3)*16 + 16;
-        const size_t T = (rand() % 4)*16 + 18;
+        const size_t K = (rand() % 2)*16 + 16; // don't touch
+        const size_t N = (rand() % 2)*16 + 16; // don't touch
+        const size_t M = (rand() % 2)*16 + 16; // don't touch
+        const size_t T = (rand() % 2)*16 + 32; // don't touch
         const size_t max_iterations = 100;
 
         // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
