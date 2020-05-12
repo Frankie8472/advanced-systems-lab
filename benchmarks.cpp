@@ -67,7 +67,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
     do {
         num_runs = num_runs * multiplier;
         for(size_t i = 0; i < num_runs; i++){
-            bw_data.push_back(&bw.deep_copy());
+            bw_data.push_back(new BWdata(bw));
         }
 
         start = start_tsc();
@@ -96,7 +96,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
         iter = 0;
         // Create all copies for all runs of the function
         for(size_t i = 0; i < num_runs; i++){
-            bw_data.push_back(&bw.deep_copy());
+            bw_data.push_back(new BWdata(bw));
         }
         
         // Measure function
