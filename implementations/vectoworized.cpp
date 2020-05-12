@@ -33,11 +33,11 @@ void compute_sigma(const BWdata& bw);
 void update_init_prob(const BWdata& bw);
 void update_trans_prob(const BWdata& bw);
 void update_emit_prob(const BWdata& bw);
-size_t cowomp_bw_vector(const BWdata& bw);
+size_t comp_bw_vectoworized(const BWdata& bw);
 
-REGISTER_FUNCTION(cowomp_bw_vector, "vectowor", "IN PROGRESS: Vector Optimized");
+REGISTER_FUNCTION(comp_bw_vectoworized, "vectoworized", "vectoworized");
 
-size_t cowomp_bw_vector(const BWdata& bw){
+size_t comp_bw_vectoworized(const BWdata& bw){
 
     size_t iter = 0;
 
