@@ -25,6 +25,7 @@
 #include <immintrin.h>
 
 #include "../common.h"
+#include "../helper_utilities.h"
 
 void forward_step(const BWdata& bw);
 void backward_step(const BWdata& bw);
@@ -35,7 +36,26 @@ void update_trans_prob(const BWdata& bw);
 void update_emit_prob(const BWdata& bw);
 size_t comp_bw_vectoworized(const BWdata& bw);
 
+// helper functions
+void transpose_matrix(const double* input, double* output, const size_t N, const size_t M);
+
+// forward and backward pass are recursively dependent on T
+#define STRIDE_LAYER_T_RECURSIVE 1
+// note, though, the computation of trans_prob requires
+// shifting and the computation of emit_prob requires masking
+#define STRIDE_LAYER_T_NON_RECURSIVE 4
+// all other loops are fully independent
+#define STRIDE_LAYER_N_0 4
+#define STRIDE_LAYER_N_1 4
+#define STRIDE_LAYER_N 4
+#define STRIDE_LAYER_M 4
+#define STRIDE_LAYER_K 4
+
 REGISTER_FUNCTION(comp_bw_vectoworized, "vectoworized", "vectoworized");
+
+// local globals (heh)
+double* helper_4_doubles;
+double* trans_prob_transpose;
 
 size_t comp_bw_vectoworized(const BWdata& bw){
 
@@ -46,10 +66,19 @@ size_t comp_bw_vectoworized(const BWdata& bw){
 
         iter++;
 
+        // helpers
+        helper_4_doubles = (double *)aligned_alloc(32, 4*sizeof(double));
+        trans_prob_transpose = (double *)aligned_alloc(32, bw.N*bw.N*sizeof(double));
+        transpose_matrix(bw.trans_prob, trans_prob_transpose, bw.N, bw.N); // actually worth
+
         forward_step(bw);
         backward_step(bw);
         compute_gamma(bw);
         compute_sigma(bw);
+
+        free(helper_4_doubles);
+        free(trans_prob_transpose);
+
         update_init_prob(bw);
         update_trans_prob(bw);
         update_emit_prob(bw);
@@ -67,36 +96,276 @@ size_t comp_bw_vectoworized(const BWdata& bw){
 }
 
 
+inline void transpose_matrix(const double* input, double* output, const size_t N, const size_t M) {
+    for (size_t n = 0; n < N; n++) {
+        for (size_t m = 0; m < M; m++) {
+            output[m*N + n] = input[n*M + m];
+        }
+    }
+}
+
+
 inline void forward_step(const BWdata& bw) {
-    for (size_t k = 0; k < bw.K; k++) {
+
+    const __m256d zeros = _mm256_setzero_pd();
+    const __m256d ones = _mm256_set1_pd(1.0);
+
+    // very tedious to vectorize; T is recursively dependent
+    for (size_t k = 0; k < bw.K; k += STRIDE_LAYER_K) {
+
+        __m256d vec_c_norm = zeros;
+
         // t = 0, base case
-        bw.c_norm[k*bw.T + 0] = 0;
-        for (size_t n = 0; n < bw.N; n++) {
-            bw.alpha[(k*bw.T + 0)*bw.N + n] = bw.init_prob[n]*bw.emit_prob[n*bw.M + bw.observations[k*bw.T + 0]];
-            bw.c_norm[k*bw.T + 0] += bw.alpha[(k*bw.T + 0)*bw.N + n];
+        for (size_t n = 0; n < bw.N; n += STRIDE_LAYER_N) {
+
+            const __m256d vec_init_prob = _mm256_load_pd(bw.init_prob + n);
+
+            const __m256d vec_emit_prob_kp0 = _mm256_set_pd(
+                bw.emit_prob[(n + 3)*bw.M + bw.observations[(k + 0)*bw.T + 0]],
+                bw.emit_prob[(n + 2)*bw.M + bw.observations[(k + 0)*bw.T + 0]],
+                bw.emit_prob[(n + 1)*bw.M + bw.observations[(k + 0)*bw.T + 0]],
+                bw.emit_prob[(n + 0)*bw.M + bw.observations[(k + 0)*bw.T + 0]]
+            );
+
+            const __m256d vec_emit_prob_kp1 = _mm256_set_pd(
+                bw.emit_prob[(n + 3)*bw.M + bw.observations[(k + 1)*bw.T + 0]],
+                bw.emit_prob[(n + 2)*bw.M + bw.observations[(k + 1)*bw.T + 0]],
+                bw.emit_prob[(n + 1)*bw.M + bw.observations[(k + 1)*bw.T + 0]],
+                bw.emit_prob[(n + 0)*bw.M + bw.observations[(k + 1)*bw.T + 0]]
+            );
+
+            const __m256d vec_emit_prob_kp2 = _mm256_set_pd(
+                bw.emit_prob[(n + 3)*bw.M + bw.observations[(k + 2)*bw.T + 0]],
+                bw.emit_prob[(n + 2)*bw.M + bw.observations[(k + 2)*bw.T + 0]],
+                bw.emit_prob[(n + 1)*bw.M + bw.observations[(k + 2)*bw.T + 0]],
+                bw.emit_prob[(n + 0)*bw.M + bw.observations[(k + 2)*bw.T + 0]]
+            );
+
+            const __m256d vec_emit_prob_kp3 = _mm256_set_pd(
+                bw.emit_prob[(n + 3)*bw.M + bw.observations[(k + 3)*bw.T + 0]],
+                bw.emit_prob[(n + 2)*bw.M + bw.observations[(k + 3)*bw.T + 0]],
+                bw.emit_prob[(n + 1)*bw.M + bw.observations[(k + 3)*bw.T + 0]],
+                bw.emit_prob[(n + 0)*bw.M + bw.observations[(k + 3)*bw.T + 0]]
+            );
+
+            const __m256d vec_kp0 = _mm256_mul_pd(vec_init_prob, vec_emit_prob_kp0);
+            const __m256d vec_kp1 = _mm256_mul_pd(vec_init_prob, vec_emit_prob_kp1);
+            const __m256d vec_kp2 = _mm256_mul_pd(vec_init_prob, vec_emit_prob_kp2);
+            const __m256d vec_kp3 = _mm256_mul_pd(vec_init_prob, vec_emit_prob_kp3);
+
+            const __m256d sum_0_0 = _mm256_hadd_pd(vec_kp0, vec_kp1);
+            const __m256d sum_0_1 = _mm256_hadd_pd(vec_kp2, vec_kp3);
+            const __m256d sum_0_2 = _mm256_blend_pd(sum_0_0, sum_0_1, 0b1100);
+            const __m256d sum_0_3 = _mm256_permute2f128_pd(sum_0_0, sum_0_1, 0b00100001);
+            const __m256d sum_0_4 = _mm256_add_pd(sum_0_2, sum_0_3);
+            vec_c_norm = _mm256_add_pd(vec_c_norm, sum_0_4);
+
+            _mm256_store_pd((bw.alpha + ((k + 0)*bw.T + 0)*bw.N + n), vec_kp0);
+            _mm256_store_pd((bw.alpha + ((k + 1)*bw.T + 0)*bw.N + n), vec_kp1);
+            _mm256_store_pd((bw.alpha + ((k + 2)*bw.T + 0)*bw.N + n), vec_kp2);
+            _mm256_store_pd((bw.alpha + ((k + 3)*bw.T + 0)*bw.N + n), vec_kp3);
         }
 
-        bw.c_norm[k*bw.T + 0] = 1.0/bw.c_norm[k*bw.T + 0];
-        for (size_t n = 0; n < bw.N; n++){
-            bw.alpha[(k*bw.T + 0)*bw.N + n] *= bw.c_norm[k*bw.T + 0];
+        vec_c_norm = _mm256_div_pd(ones, vec_c_norm);
+        _mm256_store_pd(helper_4_doubles, vec_c_norm);
+
+        const __m256d vec_c_norm_kp0 = _mm256_set1_pd(helper_4_doubles[0]);
+        const __m256d vec_c_norm_kp1 = _mm256_set1_pd(helper_4_doubles[1]);
+        const __m256d vec_c_norm_kp2 = _mm256_set1_pd(helper_4_doubles[2]);
+        const __m256d vec_c_norm_kp3 = _mm256_set1_pd(helper_4_doubles[3]);
+
+        for (size_t n = 0; n < bw.N; n += STRIDE_LAYER_N){
+
+            double* index_kp0 = bw.alpha + (((k + 0)*bw.T + 0)*bw.N + n);
+            double* index_kp1 = bw.alpha + (((k + 1)*bw.T + 0)*bw.N + n);
+            double* index_kp2 = bw.alpha + (((k + 2)*bw.T + 0)*bw.N + n);
+            double* index_kp3 = bw.alpha + (((k + 3)*bw.T + 0)*bw.N + n);
+
+            const __m256d vec_alpha_kp0 = _mm256_load_pd(index_kp0);
+            const __m256d vec_alpha_kp1 = _mm256_load_pd(index_kp1);
+            const __m256d vec_alpha_kp2 = _mm256_load_pd(index_kp2);
+            const __m256d vec_alpha_kp3 = _mm256_load_pd(index_kp3);
+
+            _mm256_store_pd(index_kp0, _mm256_mul_pd(vec_alpha_kp0, vec_c_norm_kp0));
+            _mm256_store_pd(index_kp1, _mm256_mul_pd(vec_alpha_kp1, vec_c_norm_kp1));
+            _mm256_store_pd(index_kp2, _mm256_mul_pd(vec_alpha_kp2, vec_c_norm_kp2));
+            _mm256_store_pd(index_kp3, _mm256_mul_pd(vec_alpha_kp3, vec_c_norm_kp3));
         }
+
+        bw.c_norm[(k + 0)*bw.T + 0] = helper_4_doubles[0];
+        bw.c_norm[(k + 1)*bw.T + 0] = helper_4_doubles[1];
+        bw.c_norm[(k + 2)*bw.T + 0] = helper_4_doubles[2];
+        bw.c_norm[(k + 3)*bw.T + 0] = helper_4_doubles[3];
 
         // recursion step
-        for (size_t t = 1; t < bw.T; t++) {
-            bw.c_norm[k*bw.T + t] = 0;
-            for (size_t n0 = 0; n0 < bw.N; n0++) {
-                double alpha_temp = 0.0;
-                for (size_t n1 = 0; n1 < bw.N; n1++) {
-                    alpha_temp += bw.alpha[(k*bw.T + (t-1))*bw.N + n1]*bw.trans_prob[n1*bw.N + n0];
+        for (size_t t = 1; t < bw.T; t += STRIDE_LAYER_T_RECURSIVE) {
+
+            vec_c_norm = zeros;
+
+            for (size_t n0 = 0; n0 < bw.N; n0 += STRIDE_LAYER_N_0) {
+
+                const __m256d vec_emit_prob_kp0 = _mm256_set_pd(
+                    bw.emit_prob[(n0 + 3)*bw.M + bw.observations[(k + 0)*bw.T + t]],
+                    bw.emit_prob[(n0 + 2)*bw.M + bw.observations[(k + 0)*bw.T + t]],
+                    bw.emit_prob[(n0 + 1)*bw.M + bw.observations[(k + 0)*bw.T + t]],
+                    bw.emit_prob[(n0 + 0)*bw.M + bw.observations[(k + 0)*bw.T + t]]
+                );
+
+                const __m256d vec_emit_prob_kp1 = _mm256_set_pd(
+                    bw.emit_prob[(n0 + 3)*bw.M + bw.observations[(k + 1)*bw.T + t]],
+                    bw.emit_prob[(n0 + 2)*bw.M + bw.observations[(k + 1)*bw.T + t]],
+                    bw.emit_prob[(n0 + 1)*bw.M + bw.observations[(k + 1)*bw.T + t]],
+                    bw.emit_prob[(n0 + 0)*bw.M + bw.observations[(k + 1)*bw.T + t]]
+                );
+
+                const __m256d vec_emit_prob_kp2 = _mm256_set_pd(
+                    bw.emit_prob[(n0 + 3)*bw.M + bw.observations[(k + 2)*bw.T + t]],
+                    bw.emit_prob[(n0 + 2)*bw.M + bw.observations[(k + 2)*bw.T + t]],
+                    bw.emit_prob[(n0 + 1)*bw.M + bw.observations[(k + 2)*bw.T + t]],
+                    bw.emit_prob[(n0 + 0)*bw.M + bw.observations[(k + 2)*bw.T + t]]
+                );
+
+                const __m256d vec_emit_prob_kp3 = _mm256_set_pd(
+                    bw.emit_prob[(n0 + 3)*bw.M + bw.observations[(k + 3)*bw.T + t]],
+                    bw.emit_prob[(n0 + 2)*bw.M + bw.observations[(k + 3)*bw.T + t]],
+                    bw.emit_prob[(n0 + 1)*bw.M + bw.observations[(k + 3)*bw.T + t]],
+                    bw.emit_prob[(n0 + 0)*bw.M + bw.observations[(k + 3)*bw.T + t]]
+                );
+
+                __m256d vec_trans_prob_sum_np0_kp0 = zeros;
+                __m256d vec_trans_prob_sum_np1_kp0 = zeros;
+                __m256d vec_trans_prob_sum_np2_kp0 = zeros;
+                __m256d vec_trans_prob_sum_np3_kp0 = zeros;
+
+                __m256d vec_trans_prob_sum_np0_kp1 = zeros;
+                __m256d vec_trans_prob_sum_np1_kp1 = zeros;
+                __m256d vec_trans_prob_sum_np2_kp1 = zeros;
+                __m256d vec_trans_prob_sum_np3_kp1 = zeros;
+
+                __m256d vec_trans_prob_sum_np0_kp2 = zeros;
+                __m256d vec_trans_prob_sum_np1_kp2 = zeros;
+                __m256d vec_trans_prob_sum_np2_kp2 = zeros;
+                __m256d vec_trans_prob_sum_np3_kp2 = zeros;
+
+                __m256d vec_trans_prob_sum_np0_kp3 = zeros;
+                __m256d vec_trans_prob_sum_np1_kp3 = zeros;
+                __m256d vec_trans_prob_sum_np2_kp3 = zeros;
+                __m256d vec_trans_prob_sum_np3_kp3 = zeros;
+
+                for (size_t n1 = 0; n1 < bw.N; n1 += STRIDE_LAYER_N_1) {
+
+                    const double* index_alpha_kp0 = bw.alpha + ((k + 0)*bw.T + (t-1))*bw.N + n1;
+                    const double* index_alpha_kp1 = bw.alpha + ((k + 1)*bw.T + (t-1))*bw.N + n1;
+                    const double* index_alpha_kp2 = bw.alpha + ((k + 2)*bw.T + (t-1))*bw.N + n1;
+                    const double* index_alpha_kp3 = bw.alpha + ((k + 3)*bw.T + (t-1))*bw.N + n1;
+
+                    const __m256d vec_trans_np0 = _mm256_load_pd(trans_prob_transpose + ((n0 + 0)*bw.N + n1));
+                    const __m256d vec_trans_np1 = _mm256_load_pd(trans_prob_transpose + ((n0 + 1)*bw.N + n1));
+                    const __m256d vec_trans_np2 = _mm256_load_pd(trans_prob_transpose + ((n0 + 2)*bw.N + n1));
+                    const __m256d vec_trans_np3 = _mm256_load_pd(trans_prob_transpose + ((n0 + 3)*bw.N + n1));
+
+                    const __m256d vec_alpha_kp0 = _mm256_load_pd(index_alpha_kp0);
+                    const __m256d vec_alpha_kp1 = _mm256_load_pd(index_alpha_kp1);
+                    const __m256d vec_alpha_kp2 = _mm256_load_pd(index_alpha_kp2);
+                    const __m256d vec_alpha_kp3 = _mm256_load_pd(index_alpha_kp3);
+
+                    vec_trans_prob_sum_np0_kp0 = _mm256_fmadd_pd(vec_trans_np0, vec_alpha_kp0, vec_trans_prob_sum_np0_kp0);
+                    vec_trans_prob_sum_np1_kp0 = _mm256_fmadd_pd(vec_trans_np1, vec_alpha_kp0, vec_trans_prob_sum_np1_kp0);
+                    vec_trans_prob_sum_np2_kp0 = _mm256_fmadd_pd(vec_trans_np2, vec_alpha_kp0, vec_trans_prob_sum_np2_kp0);
+                    vec_trans_prob_sum_np3_kp0 = _mm256_fmadd_pd(vec_trans_np3, vec_alpha_kp0, vec_trans_prob_sum_np3_kp0);
+
+                    vec_trans_prob_sum_np0_kp1 = _mm256_fmadd_pd(vec_trans_np0, vec_alpha_kp1, vec_trans_prob_sum_np0_kp1);
+                    vec_trans_prob_sum_np1_kp1 = _mm256_fmadd_pd(vec_trans_np1, vec_alpha_kp1, vec_trans_prob_sum_np1_kp1);
+                    vec_trans_prob_sum_np2_kp1 = _mm256_fmadd_pd(vec_trans_np2, vec_alpha_kp1, vec_trans_prob_sum_np2_kp1);
+                    vec_trans_prob_sum_np3_kp1 = _mm256_fmadd_pd(vec_trans_np3, vec_alpha_kp1, vec_trans_prob_sum_np3_kp1);
+
+                    vec_trans_prob_sum_np0_kp2 = _mm256_fmadd_pd(vec_trans_np0, vec_alpha_kp2, vec_trans_prob_sum_np0_kp2);
+                    vec_trans_prob_sum_np1_kp2 = _mm256_fmadd_pd(vec_trans_np1, vec_alpha_kp2, vec_trans_prob_sum_np1_kp2);
+                    vec_trans_prob_sum_np2_kp2 = _mm256_fmadd_pd(vec_trans_np2, vec_alpha_kp2, vec_trans_prob_sum_np2_kp2);
+                    vec_trans_prob_sum_np3_kp2 = _mm256_fmadd_pd(vec_trans_np3, vec_alpha_kp2, vec_trans_prob_sum_np3_kp2);
+
+                    vec_trans_prob_sum_np0_kp3 = _mm256_fmadd_pd(vec_trans_np0, vec_alpha_kp3, vec_trans_prob_sum_np0_kp3);
+                    vec_trans_prob_sum_np1_kp3 = _mm256_fmadd_pd(vec_trans_np1, vec_alpha_kp3, vec_trans_prob_sum_np1_kp3);
+                    vec_trans_prob_sum_np2_kp3 = _mm256_fmadd_pd(vec_trans_np2, vec_alpha_kp3, vec_trans_prob_sum_np2_kp3);
+                    vec_trans_prob_sum_np3_kp3 = _mm256_fmadd_pd(vec_trans_np3, vec_alpha_kp3, vec_trans_prob_sum_np3_kp3);
+
                 }
-                bw.alpha[(k*bw.T + t)*bw.N + n0] = bw.emit_prob[n0*bw.M + bw.observations[k*bw.T + t]] * alpha_temp;
-                bw.c_norm[k*bw.T + t] += bw.alpha[(k*bw.T + t)*bw.N + n0];
+
+                const __m256d a0 = _mm256_hadd_pd(vec_trans_prob_sum_np0_kp0, vec_trans_prob_sum_np1_kp0);
+                const __m256d a1 = _mm256_hadd_pd(vec_trans_prob_sum_np2_kp0, vec_trans_prob_sum_np3_kp0);
+                const __m256d a2 = _mm256_blend_pd(a0, a1, 0b1100);
+                const __m256d a3 = _mm256_permute2f128_pd(a0, a1, 0b00100001);
+                const __m256d a4 = _mm256_add_pd(a2, a3);
+
+                const __m256d b0 = _mm256_hadd_pd(vec_trans_prob_sum_np0_kp1, vec_trans_prob_sum_np1_kp1);
+                const __m256d b1 = _mm256_hadd_pd(vec_trans_prob_sum_np2_kp1, vec_trans_prob_sum_np3_kp1);
+                const __m256d b2 = _mm256_blend_pd(b0, b1, 0b1100);
+                const __m256d b3 = _mm256_permute2f128_pd(b0, b1, 0b00100001);
+                const __m256d b4 = _mm256_add_pd(b2, b3);
+
+                const __m256d c0 = _mm256_hadd_pd(vec_trans_prob_sum_np0_kp2, vec_trans_prob_sum_np1_kp2);
+                const __m256d c1 = _mm256_hadd_pd(vec_trans_prob_sum_np2_kp2, vec_trans_prob_sum_np3_kp2);
+                const __m256d c2 = _mm256_blend_pd(c0, c1, 0b1100);
+                const __m256d c3 = _mm256_permute2f128_pd(c0, c1, 0b00100001);
+                const __m256d c4 = _mm256_add_pd(c2, c3);
+
+                const __m256d d0 = _mm256_hadd_pd(vec_trans_prob_sum_np0_kp3, vec_trans_prob_sum_np1_kp3);
+                const __m256d d1 = _mm256_hadd_pd(vec_trans_prob_sum_np2_kp3, vec_trans_prob_sum_np3_kp3);
+                const __m256d d2 = _mm256_blend_pd(d0, d1, 0b1100);
+                const __m256d d3 = _mm256_permute2f128_pd(d0, d1, 0b00100001);
+                const __m256d d4 = _mm256_add_pd(d2, d3);
+
+                const __m256d vec_kp0 = _mm256_mul_pd(a4, vec_emit_prob_kp0);
+                const __m256d vec_kp1 = _mm256_mul_pd(b4, vec_emit_prob_kp1);
+                const __m256d vec_kp2 = _mm256_mul_pd(c4, vec_emit_prob_kp2);
+                const __m256d vec_kp3 = _mm256_mul_pd(d4, vec_emit_prob_kp3);
+
+                const __m256d sum_0_0 = _mm256_hadd_pd(vec_kp0, vec_kp1);
+                const __m256d sum_0_1 = _mm256_hadd_pd(vec_kp2, vec_kp3);
+                const __m256d sum_0_2 = _mm256_blend_pd(sum_0_0, sum_0_1, 0b1100);
+                const __m256d sum_0_3 = _mm256_permute2f128_pd(sum_0_0, sum_0_1, 0b00100001);
+                const __m256d sum_0_4 = _mm256_add_pd(sum_0_2, sum_0_3);
+                vec_c_norm = _mm256_add_pd(vec_c_norm, sum_0_4);
+
+                _mm256_store_pd((bw.alpha + ((k + 0)*bw.T + t)*bw.N + n0), vec_kp0);
+                _mm256_store_pd((bw.alpha + ((k + 1)*bw.T + t)*bw.N + n0), vec_kp1);
+                _mm256_store_pd((bw.alpha + ((k + 2)*bw.T + t)*bw.N + n0), vec_kp2);
+                _mm256_store_pd((bw.alpha + ((k + 3)*bw.T + t)*bw.N + n0), vec_kp3);
             }
-            bw.c_norm[k*bw.T + t] = 1.0/bw.c_norm[k*bw.T + t];
-            for (size_t n0 = 0; n0 < bw.N; n0++) {
-                bw.alpha[(k*bw.T + t)*bw.N + n0] *= bw.c_norm[k*bw.T + t];
+
+            vec_c_norm = _mm256_div_pd(ones, vec_c_norm);
+            _mm256_store_pd(helper_4_doubles, vec_c_norm);
+
+            const __m256d vec_c_norm_kp0 = _mm256_set1_pd(helper_4_doubles[0]);
+            const __m256d vec_c_norm_kp1 = _mm256_set1_pd(helper_4_doubles[1]);
+            const __m256d vec_c_norm_kp2 = _mm256_set1_pd(helper_4_doubles[2]);
+            const __m256d vec_c_norm_kp3 = _mm256_set1_pd(helper_4_doubles[3]);
+
+            for (size_t n = 0; n < bw.N; n += STRIDE_LAYER_N){
+
+                double* index_kp0 = bw.alpha + (((k + 0)*bw.T + t)*bw.N + n);
+                double* index_kp1 = bw.alpha + (((k + 1)*bw.T + t)*bw.N + n);
+                double* index_kp2 = bw.alpha + (((k + 2)*bw.T + t)*bw.N + n);
+                double* index_kp3 = bw.alpha + (((k + 3)*bw.T + t)*bw.N + n);
+
+                const __m256d vec_alpha_kp0 = _mm256_load_pd(index_kp0);
+                const __m256d vec_alpha_kp1 = _mm256_load_pd(index_kp1);
+                const __m256d vec_alpha_kp2 = _mm256_load_pd(index_kp2);
+                const __m256d vec_alpha_kp3 = _mm256_load_pd(index_kp3);
+
+                _mm256_store_pd(index_kp0, _mm256_mul_pd(vec_alpha_kp0, vec_c_norm_kp0));
+                _mm256_store_pd(index_kp1, _mm256_mul_pd(vec_alpha_kp1, vec_c_norm_kp1));
+                _mm256_store_pd(index_kp2, _mm256_mul_pd(vec_alpha_kp2, vec_c_norm_kp2));
+                _mm256_store_pd(index_kp3, _mm256_mul_pd(vec_alpha_kp3, vec_c_norm_kp3));
             }
+
+            bw.c_norm[(k + 0)*bw.T + t] = helper_4_doubles[0];
+            bw.c_norm[(k + 1)*bw.T + t] = helper_4_doubles[1];
+            bw.c_norm[(k + 2)*bw.T + t] = helper_4_doubles[2];
+            bw.c_norm[(k + 3)*bw.T + t] = helper_4_doubles[3];
+
         }
+
     }
 }
 
@@ -119,6 +388,20 @@ inline void backward_step(const BWdata& bw) {
             }
         }
     }
+
+    /*
+    for (size_t k = 0; k < 4; k++) {
+        printf("c_norm[k = %zu][t = %zu] = %f\n", k, (size_t) 1, bw.c_norm[k*bw.T + 1]);
+        fflush(0);
+    }
+    for (size_t k = 0; k < 4; k++) {
+        for (size_t n = 0; n < 4; n++) {
+            printf("alpha[k = %zu][t = %zu][n = %zu] = %f\n", k, (size_t) 1, n, bw.alpha[(k*bw.T + 1)*bw.N + n]);
+            fflush(0);
+        }
+    }*/
+
+
 }
 
 
