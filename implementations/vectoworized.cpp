@@ -490,24 +490,44 @@ inline void backward_step(const BWdata& bw) {
 
 
 inline void compute_gamma(const BWdata& bw) {
+
+
     for (size_t k = 0; k < bw.K; k++) {
+
         for (size_t t = 0; t < bw.T; t++) {
+
             for (size_t n = 0; n < bw.N; n++) {
+
                 bw.ggamma[(k*bw.T + t)*bw.N + n] = bw.alpha[(k*bw.T + t)*bw.N + n] * bw.beta[(k*bw.T + t)*bw.N + n] / bw.c_norm[k*bw.T + t];
+
             }
+
         }
+
     }
 
+
+
     // sum up bw.ggamma (from t = 0 to bw.T-2; serve as normalizer for bw.trans_prob)
+
     for (size_t k = 0; k < bw.K; k++) {
+
         for (size_t n = 0; n < bw.N; n++) {
+
             double g_sum = 0.0;
+
             for (size_t t = 0; t < bw.T-1; t++) {
+
                 g_sum += bw.ggamma[(k*bw.T + t)*bw.N + n];
+
             }
+
             bw.gamma_sum[k*bw.N + n] = g_sum;
+
         }
+
     }
+
 
     /*
     for (size_t k = 0; k < 4; k++) {
@@ -520,33 +540,56 @@ inline void compute_gamma(const BWdata& bw) {
             fflush(0);
         }
     }*/
-
-
 }
 
 
 inline void compute_sigma(const BWdata& bw) {
+
+
+
     for (size_t k = 0; k < bw.K; k++) {
+
         for (size_t t = 0; t < bw.T-1; t++) {
+
             for (size_t n0 = 0; n0 < bw.N; n0++) {
+
                 for (size_t n1 = 0; n1 < bw.N; n1++) {
+
                     bw.sigma[((k*bw.T + t)*bw.N + n0)*bw.N + n1] = \
-                        bw.alpha[(k*bw.T + t)*bw.N + n0]*bw.trans_prob[n0*bw.N + n1]*bw.beta[(k*bw.T + (t+1))*bw.N + n1]*bw.emit_prob[n1*bw.M + bw.observations[k*bw.T + (t+1)]];
+                        bw.alpha[(k*bw.T + t)*bw.N + n0]*\
+                        bw.trans_prob[n0*bw.N + n1]\
+                        *bw.beta[(k*bw.T + (t+1))*bw.N + n1]*\
+                        bw.emit_prob[n1*bw.M + bw.observations[k*bw.T + (t+1)]];
+
                 }
+
             }
+
         }
+
+
 
         // sum up bw.sigma (from t = 0 to bw.T-1)
         for (size_t n0 = 0; n0 < bw.N; n0++) {
+
             for (size_t n1 = 0; n1 < bw.N; n1++) {
+
                 double s_sum = 0.0;
+
                 for (size_t t = 0; t < bw.T-1; t++) {
+
                     s_sum += bw.sigma[((k*bw.T + t)*bw.N + n0)*bw.N + n1];
+
                 }
+
                 bw.sigma_sum[(k*bw.N + n0)*bw.N + n1] = s_sum;
+
             }
+
         }
+
     }
+
 }
 
 
@@ -584,43 +627,83 @@ inline void update_init_prob(const BWdata& bw) {
 
 
 inline void update_trans_prob(const BWdata& bw) {
+
+
+
     for (size_t n0 = 0; n0 < bw.N; n0++) {
+
         for (size_t n1 = 0; n1 < bw.N; n1++) {
+
             double numerator_sum = 0.0;
+
             double denominator_sum = 0.0;
+
             for (size_t k = 0; k < bw.K; k++) {
+
                 numerator_sum += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1];
+
                 denominator_sum += bw.gamma_sum[k*bw.N + n0];
+
             }
+
             bw.trans_prob[n0*bw.N + n1] = numerator_sum / denominator_sum;
+
         }
+
     }
+
 }
 
 
 inline void update_emit_prob(const BWdata& bw) {
+
+
     // add last bw.T-step to bw.gamma_sum
     for (size_t k = 0; k < bw.K; k++) {
+
         for (size_t n = 0; n < bw.N; n++) {
+
             bw.gamma_sum[k*bw.N + n] += bw.ggamma[(k*bw.T + (bw.T-1))*bw.N + n];
+
         }
+
     }
+
+
+
     // update bw.emit_prob
     for (size_t n = 0; n < bw.N; n++) {
+
         for (size_t m = 0; m < bw.M; m++) {
+
             double numerator_sum = 0.0;
+
             double denominator_sum = 0.0;
+
             for (size_t k = 0; k < bw.K; k++) {
+
                 double ggamma_cond_sum = 0.0;
+
                 for (size_t t = 0; t < bw.T; t++) {
+
                     if (bw.observations[k*bw.T + t] == m) {
+
                         ggamma_cond_sum += bw.ggamma[(k*bw.T + t)*bw.N + n];
+
                     }
+
                 }
+
                 numerator_sum += ggamma_cond_sum;
+
                 denominator_sum += bw.gamma_sum[k*bw.N + n];
+
             }
+
             bw.emit_prob[n*bw.M + m] = numerator_sum / denominator_sum;
+
         }
+
     }
+
 }
