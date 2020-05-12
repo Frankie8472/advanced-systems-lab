@@ -84,6 +84,7 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
         double neg_log_likelihood_sum = 0.0;
         for (size_t k = 0; k < bw.K; k++) {
             for (size_t t = 0; t < bw.T; t++) {
+                // there's no AVX instruction for the logarithm
                 neg_log_likelihood_sum = neg_log_likelihood_sum + log(bw.c_norm[k*bw.T + t]);
             }
         }
@@ -102,6 +103,7 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
 inline void transpose_matrix(const double* input, double* output, const size_t N, const size_t M) {
     for (size_t n = 0; n < N; n++) {
         for (size_t m = 0; m < M; m++) {
+            // this can't be really vectorized (maybe combined with 4x4 blocking)
             output[m*N + n] = input[n*M + m];
         }
     }
