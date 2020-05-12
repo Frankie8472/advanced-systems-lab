@@ -49,7 +49,7 @@ void transpose_matrix(const double* input, double* output, const size_t N, const
 #define STRIDE_LAYER_M 4
 #define STRIDE_LAYER_K 4
 
-REGISTER_FUNCTION(comp_bw_vectOwOrized, "vectOwOrized", "vectOwOrized");
+REGISTER_FUNCTION(comp_bw_vectOwOrized, "vectOwOrized", "Vector Optimized: AVX2 & FMA");
 
 // local globals (heh)
 double* helper_4_doubles;
@@ -551,25 +551,35 @@ inline void compute_sigma(const BWdata& bw) {
 
 
 inline void update_init_prob(const BWdata& bw) {
+
     const __m256d vec_K_inv = _mm256_set1_pd(1.0/bw.K);
+
     for (size_t n = 0; n < bw.N; n += 4) {
-        __m256d vec_g0_sum = _mm256_setzero_pd();
+
+        __m256d vec_g0_sum = zeros;
+
         for (size_t k = 0; k < bw.K; k += 4) {
+
             const size_t index_0 = ((k + 0)*bw.T + 0)*bw.N + n;
             const size_t index_1 = ((k + 1)*bw.T + 0)*bw.N + n;
             const size_t index_2 = ((k + 2)*bw.T + 0)*bw.N + n;
             const size_t index_3 = ((k + 3)*bw.T + 0)*bw.N + n;
+
             const __m256d vec_gamma_k_0_n_0 = _mm256_load_pd(bw.ggamma + index_0);
             const __m256d vec_gamma_k_1_n_0 = _mm256_load_pd(bw.ggamma + index_1);
             const __m256d vec_gamma_k_2_n_0 = _mm256_load_pd(bw.ggamma + index_2);
             const __m256d vec_gamma_k_3_n_0 = _mm256_load_pd(bw.ggamma + index_3);
+
             const __m256d a = _mm256_add_pd(vec_gamma_k_0_n_0, vec_gamma_k_1_n_0);
             const __m256d b = _mm256_add_pd(vec_gamma_k_2_n_0, vec_gamma_k_3_n_0);
-            const __m256d c = _mm256_add_pd(a, b);
-            vec_g0_sum = _mm256_add_pd(vec_g0_sum, c);
+
+            vec_g0_sum = _mm256_add_pd(vec_g0_sum, _mm256_add_pd(a, b));
         }
+
         _mm256_store_pd(bw.init_prob + n, _mm256_mul_pd(vec_g0_sum, vec_K_inv));
+
     }
+
 }
 
 
