@@ -14,7 +14,7 @@ add_executable(verification
     implementations/scalar_optimized_reorder.cpp
     implementations/scalar_optimized_blocking.cpp
     implementations/vector_optimized.cpp
-    implementations/vector_owoptimized.cpp
+    implementations/vectoworized.cpp
     implementations/combined_optimized.cpp
 )
 
@@ -28,6 +28,6 @@ add_executable(benchmarks
     implementations/scalar_optimized_reorder.cpp
     implementations/scalar_optimized_blocking.cpp
     implementations/vector_optimized.cpp
-    implementations/vector_owoptimized.cpp
+    implementations/vectoworized.cpp
     implementations/combined_optimized.cpp
 )
