@@ -222,12 +222,14 @@ inline void backward_step(const BWdata& bw) {
 }
 
 
+// NOTE: This computes gamma and sigma
 inline void compute_gamma(const BWdata& bw) {
     // ====== Sum up bw.ggamma (from t = 0 to bw.T-2; serve as normalizer for bw.trans_prob) =====
     for (size_t k = 0; k < bw.K; k++) {
         // Init
         double g_sum, s_sum;
 
+        // ----- gamma -----
         // TODO: Loop switch+blocking if N << T or vice versa i don't know
         for (size_t n0 = 0; n0 < bw.N; n0++) {
             // Init
@@ -241,6 +243,7 @@ inline void compute_gamma(const BWdata& bw) {
             // Store
             bw.gamma_sum[k*bw.N + n0] = g_sum;
 
+            // ----- sigma -----
             // TODO: Loop switch+blocking if N << T or vice versa i don't know
             for (size_t n1 = 0; n1 < bw.N; n1++) {
                 // Init
@@ -335,10 +338,14 @@ inline void update_init_prob(const BWdata& bw) {
 }
 
 
+// NOTE: This updates trans_prob and init_prob
 inline void update_trans_prob(const BWdata& bw) {
-    //Init
-    double numerator_sum, denominator_sum, g0_sum;
+    //Init (trans_prob)
+    double numerator_sum, denominator_sum;
     size_t nN;
+
+    //Init (init_prob)
+    double g0_sum;
 
     for (size_t n0 = 0; n0 < bw.N; n0++) {
         nN = n0*bw.N;
@@ -347,6 +354,7 @@ inline void update_trans_prob(const BWdata& bw) {
             // Init (trans_prob)
             numerator_sum = 0.0;
             denominator_sum = 0.0;
+
             // Init (init_prob)
             g0_sum = 0.0;
 
@@ -355,7 +363,6 @@ inline void update_trans_prob(const BWdata& bw) {
                 // Calculate (trans_prob)
                 numerator_sum += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1];
                 denominator_sum += bw.gamma_sum[k*bw.N + n0];
-
 
                 // Calculate (init_prob)
                 if(n0 == 0){
