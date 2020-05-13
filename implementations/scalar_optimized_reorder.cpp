@@ -47,7 +47,7 @@ size_t comp_bw_scalar_reorder(const BWdata& bw){
         backward_step(bw);
         compute_gamma(bw);
         //compute_sigma(bw);
-        update_init_prob(bw);
+        //update_init_prob(bw);
         update_trans_prob(bw);
         update_emit_prob(bw);
 
@@ -337,26 +337,39 @@ inline void update_init_prob(const BWdata& bw) {
 
 inline void update_trans_prob(const BWdata& bw) {
     //Init
-    double numerator_sum, denominator_sum;
+    double numerator_sum, denominator_sum, g0_sum;
     size_t nN;
 
     for (size_t n0 = 0; n0 < bw.N; n0++) {
         nN = n0*bw.N;
 
         for (size_t n1 = 0; n1 < bw.N; n1++) {
-            // Init
+            // Init (trans_prob)
             numerator_sum = 0.0;
             denominator_sum = 0.0;
+            // Init (init_prob)
+            g0_sum = 0.0;
 
 
             for (size_t k = 0; k < bw.K; k++) {
-                // Calculate
+                // Calculate (trans_prob)
                 numerator_sum += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1];
                 denominator_sum += bw.gamma_sum[k*bw.N + n0];
+
+
+                // Calculate (init_prob)
+                if(n0 == 0){
+                    g0_sum += bw.ggamma[(k*bw.T + 0)*bw.N + n1];
+                }
             }
 
-            // Store
+            // Store (trans_prob)
             bw.trans_prob[nN + n1] = numerator_sum / denominator_sum;
+
+            // Store (init_prob)
+            if(n0 == 0){
+                bw.init_prob[n1] = g0_sum/bw.K;
+            }
         }
     }
 }
