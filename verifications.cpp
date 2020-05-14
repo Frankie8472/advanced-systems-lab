@@ -15,18 +15,18 @@
     -----------------------------------------------------------------------------------
 */
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <tuple>
 #include <random>
-#include <time.h>
+#include <ctime>
 #include <unistd.h>
 // custom files for the project
 #include "helper_utilities.h"
 #include "common.h"
 
 void check_baseline(void);
-void check_user_functions(const size_t nb_random_tests);
+void check_user_functions(const size_t& nb_random_tests);
 bool test_case_ghmm_0(compute_bw_func func);
 bool test_case_ghmm_1(compute_bw_func func);
 bool test_case_ghmm_2(compute_bw_func func);
@@ -35,14 +35,19 @@ bool test_case_randomized(compute_bw_func func);
 
 int main() {
     // maybe add commandline arguments, dunno
-    if ( true ) check_baseline();
+    if (true) check_baseline();
     const size_t nb_random_tests = 5;
-    if ( true ) check_user_functions(nb_random_tests);
+    if (true) check_user_functions(nb_random_tests);
 }
 
-
+/**
+ * Verifies the baseline implementation using an existing and verified example created in ghmm
+ * For reproducibility purposes, the code can be found in misc/ghmm_experiments.ipynb
+ * Requires Jupyter Notebook, Python 2.7 and Linux
+ * ghmm documentation: http://ghmm.sourceforge.net/index.html
+ * Download link (working 09.05.2020): https://sourceforge.net/projects/ghmm/
+ */
 inline void check_baseline(void) {
-
     const size_t baseline_random_seed = time(NULL);
     srand(baseline_random_seed);
     const size_t baseline_random_number = rand();
@@ -51,26 +56,34 @@ inline void check_baseline(void) {
     printf("\x1b[1m\n-------------------------------------------------------------------------------\x1b[0m\n");
     printf("\x1b[1mBaseline Verifications with Baseline Random Number [%zu]\x1b[0m\n", baseline_random_number);
     printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
+
+    // TEST 0
     const bool success_test_case_ghmm_0 = test_case_ghmm_0(FuncRegister::baseline_func);
-    if ( success_test_case_ghmm_0 ) {
+    if (success_test_case_ghmm_0) {
         printf("\x1b[1;32m[SUCCEEDED]:\x1b[0m Baseline Test Case Custom 0\n");
     } else {
         printf("\n\x1b[1;31m[FAILED]:\x1b[0m Baseline Test Case Custom 0\n");
     }
+
+    // TEST 1
     const bool success_test_case_ghmm_1 = test_case_ghmm_1(FuncRegister::baseline_func);
-    if ( success_test_case_ghmm_1 ) {
+    if (success_test_case_ghmm_1) {
         printf("\x1b[1;32m[SUCCEEDED]:\x1b[0m Baseline Test Case Custom 1\n");
     } else {
         printf("\n\x1b[1;31m[FAILED]:\x1b[0m Baseline Test Case Custom 1\n");
     }
+
+    // TEST 2
     const bool success_test_case_ghmm_2 = test_case_ghmm_2(FuncRegister::baseline_func);
-    if ( success_test_case_ghmm_2 ) {
+    if (success_test_case_ghmm_2) {
         printf("\x1b[1;32m[SUCCEEDED]:\x1b[0m Baseline Test Case Custom 2\n");
     } else {
         printf("\n\x1b[1;31m[FAILED]:\x1b[0m Baseline Test Case Custom 2\n");
     }
+
+    // TEST 3
     const bool success_test_case_ghmm_3 = test_case_ghmm_3(FuncRegister::baseline_func);
-    if ( success_test_case_ghmm_3 ) {
+    if (success_test_case_ghmm_3) {
         printf("\x1b[1;32m[SUCCEEDED]:\x1b[0m Baseline Test Case Custom 3\n");
     } else {
         printf("\n\x1b[1;31m[FAILED]:\x1b[0m Baseline Test Case Custom 3\n");
@@ -78,14 +91,17 @@ inline void check_baseline(void) {
     printf("-------------------------------------------------------------------------------\n");
 }
 
-
-inline void check_user_functions(const size_t nb_random_tests) {
+/**
+ * Verifies the correctness of the optimized w.r.t. the baseline using randomized tests with the following assumptions:
+ * - sufficiently high (>= 16) values
+ * - divisibility of (16)
+ */
+inline void check_user_functions(const size_t& nb_random_tests) {
 
     const size_t nb_user_functions = FuncRegister::size();
     bool test_results[nb_user_functions][nb_random_tests];
 
     // check optimizations w.r.t. the baseline using randomized tests
-    // NOTE : this assumes that the Baseline is 100% correctly implemented (which it isn't as of yet uwu)
     for (size_t i = 0; i < nb_random_tests; i++) {
 
         // randomize seed (new for each random test case)
@@ -94,10 +110,7 @@ inline void check_user_functions(const size_t nb_random_tests) {
         size_t baseline_random_number = rand();
 
         // initialize data for random test case i
-        // NOTE
-        // we assume sufficiently high (>= 16) values
-        // NOTE
-        // we assume divisibility of (16)
+        // assumption: sufficiently high (>= 16) values && divisibility of (16)
         // T = 2 (mod 16), due to "1 to T-2" loops in compute_gamma
         const size_t K = (rand() % 2)*16 + 16; // don't touch
         const size_t N = (rand() % 2)*16 + 16; // don't touch
@@ -107,7 +120,7 @@ inline void check_user_functions(const size_t nb_random_tests) {
 
         // calloc initializes each byte to 0b00000000, i.e. 0.0 (double)
         const BWdata& bw_baseline_initialized = *new BWdata(K, N, M, T, max_iterations);
-        //initialize_uar(bw_baseline_initialized); // converges fast, but works now.
+        // initialize_uar(bw_baseline_initialized); // converges fast, but works now.
         initialize_random(bw_baseline_initialized);
         const BWdata& bw_baseline = bw_baseline_initialized.deep_copy();
 
@@ -122,21 +135,20 @@ inline void check_user_functions(const size_t nb_random_tests) {
         printf("Running \x1b[1m'Baseline'\x1b[0m\n");
         printf("-------------------------------------------------------------------------------\n");
         const size_t baseline_convergence = FuncRegister::baseline_func(bw_baseline);
-        printf("It took \x1b[1m[%zu] iterations\x1b[0m to converge\n", baseline_convergence);
+        printf("It took \x1b[1m[%zu] iterations\x1b[0m until convergence\n", baseline_convergence);
         printf("-------------------------------------------------------------------------------\n");
-        const bool baseline_sucess = check_and_verify(bw_baseline);
+        const bool baseline_success = check_and_verify(bw_baseline);
         printf("-------------------------------------------------------------------------------\n");
 
         // run all user functions and compare against the data
         for(size_t f = 0; f < nb_user_functions; f++) {
-
             printf("Running User Function \x1b[1m'%s'\x1b[0m\n", FuncRegister::func_names->at(f).c_str());
             printf("-------------------------------------------------------------------------------\n");
             const BWdata& bw_user_function = bw_baseline_initialized.deep_copy();
             const size_t user_function_convergence = FuncRegister::user_funcs->at(f)(bw_user_function);
             printf("It took \x1b[1m[%zu] iterations\x1b[0m to converge\n", user_function_convergence);
             printf("-------------------------------------------------------------------------------\n");
-            const bool user_function_sucess = check_and_verify(bw_user_function);
+            const bool user_function_success = check_and_verify(bw_user_function);
             printf("-------------------------------------------------------------------------------\n");
             const bool is_bw_baseline_equal_bw_user_function = is_BWdata_equal(bw_baseline, bw_user_function);
             //const bool is_bw_baseline_equal_bw_user_function = is_BWdata_equal_only_probabilities(bw_baseline, bw_user_function);
@@ -155,9 +167,9 @@ inline void check_user_functions(const size_t nb_random_tests) {
             // U may change (false -> true), but no big h8sies pls uwu
             test_results[f][i] = (
                    ( false || is_bw_baseline_equal_bw_user_function )
-                && ( false || user_function_sucess )
-                && ( true || ( user_function_convergence == baseline_convergence ) )
-                && ( false || ( user_function_sucess == baseline_sucess ) )
+                && ( false || user_function_success )
+                && ( true  || (user_function_convergence == baseline_convergence) )
+                && ( false || (user_function_success == baseline_success) )
             );
 
             delete &bw_user_function;
@@ -174,7 +186,7 @@ inline void check_user_functions(const size_t nb_random_tests) {
 
         size_t nb_fails = 0;
         for (size_t i = 0; i < nb_random_tests; i++) {
-            if (test_results[f][i] == false) nb_fails++;
+            if (!test_results[f][i]) nb_fails++;
         }
 
         printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
@@ -198,13 +210,11 @@ inline void check_user_functions(const size_t nb_random_tests) {
 /**
  * The following test cases check against examples created in ghmm
  * For reproducibility purposes, the code can be found in misc/ghmm_experiments.ipynb
- * Needs Jupyter Notebook, Python 2.7 and Linux
- * ghmm documentation http://ghmm.sourceforge.net/index.html
- * Download link (working 09.05.2020) https://sourceforge.net/projects/ghmm/
- * */
-
+ * Requires Jupyter Notebook, Python 2.7 and Linux
+ * ghmm documentation: http://ghmm.sourceforge.net/index.html
+ * Download link (working 09.05.2020): https://sourceforge.net/projects/ghmm/
+ */
 bool test_case_ghmm_0(compute_bw_func func) {
-
     const size_t K = 1;
     const size_t N = 2;
     const size_t M = 2;
@@ -269,9 +279,7 @@ bool test_case_ghmm_0(compute_bw_func func) {
     return success;
 }
 
-
 bool test_case_ghmm_1(compute_bw_func func) {
-
     const size_t K = 1;
     const size_t N = 2;
     const size_t M = 2;
@@ -334,9 +342,7 @@ bool test_case_ghmm_1(compute_bw_func func) {
     return success;
 }
 
-
 bool test_case_ghmm_2(compute_bw_func func) {
-
     const size_t K = 1;
     const size_t N = 3;
     const size_t M = 3;
@@ -429,15 +435,12 @@ bool test_case_ghmm_2(compute_bw_func func) {
 
 
 bool test_case_ghmm_3(compute_bw_func func) {
-
     const size_t K = 1;
     const size_t N = 3;
     const size_t M = 3;
     const size_t T = 16;
     // ghmm stops after 93 iterations
-    // need to set the same, otherwise
-    // our implementation will converge
-    // to better values
+    // need to set the same, otherwise our implementation will converge to better values
     const size_t max_iterations = 93;
 
     const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
