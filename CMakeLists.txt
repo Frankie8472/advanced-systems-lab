@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(ASL)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-variable -O3 -mavx2 -mfma -march=native")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-variable -O3 -ffast-math -mavx2 -mfma -march=native")
 
 SET_SOURCE_FILES_PROPERTIES(implementations/vectoworized.cpp PROPERTIES COMPILE_FLAGS "-fno-tree-vectorize")
 
