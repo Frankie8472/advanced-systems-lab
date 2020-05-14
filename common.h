@@ -171,9 +171,9 @@ public:
      * Set the function that is considererd the baseline and other 
      * implementations are compared against. There can only be one baseline
      */
-    static void set_baseline(compute_bw_func f, std::string name);
+    static void set_baseline(compute_bw_func f, const std::string& name);
 
-    static void add_function(compute_bw_func f, std::string name, std::string description);
+    static void add_function(compute_bw_func f, const std::string& name, const std::string& description);
     
     static void printRegisteredFuncs();
 
