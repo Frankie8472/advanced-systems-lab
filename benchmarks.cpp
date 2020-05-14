@@ -57,8 +57,7 @@ int flops;
 // adjust max_iterations if it's too slow
 size_t max_iterations = 100;
 
-void perf_test(compute_bw_func func, const BWdata& bw){
-
+void perf_test(compute_bw_func func, const BWdata& bw) {
     double cycles = 0.;
     size_t num_runs = 1;
     double perf;
@@ -73,7 +72,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
 
     do {
         num_runs = num_runs * multiplier;
-        for(size_t i = 0; i < num_runs; i++){
+        for(size_t i = 0; i < num_runs; i++) {
             bw_data.push_back(new BWdata(bw));
         }
 
@@ -84,7 +83,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
 
         end = stop_tsc(start);
 
-        for(size_t i = 0; i < num_runs; i++){
+        for(size_t i = 0; i < num_runs; i++) {
             delete bw_data.at(i);
         }
         bw_data.clear();
@@ -102,7 +101,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
     for (size_t j = 0; j < REP; j++) {
         iter = 0;
         // Create all copies for all runs of the function
-        for(size_t i = 0; i < num_runs; i++){
+        for(size_t i = 0; i < num_runs; i++) {
             bw_data.push_back(new BWdata(bw));
         }
         
@@ -114,7 +113,7 @@ void perf_test(compute_bw_func func, const BWdata& bw){
         end = stop_tsc(start);
         
         // Clean up all copies
-        for(size_t i = 0; i < num_runs; i++){
+        for(size_t i = 0; i < num_runs; i++) {
             delete bw_data.at(i);
         }
         bw_data.clear();
