@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
 
     printf("Benchmarking with K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
 
-    flops = 2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 5*K*N + K + 2*N*M*K + K*T + N + N*M;
+    flops = 9*K*N*N*T + 7*K*N*T + 3*K*N + 2*K*N*N + 2*K*N*M + 3*K*T + K + N + M*N;
 
     const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);

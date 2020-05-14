@@ -40,9 +40,6 @@ SET_BASELINE(comp_bw, "Baseline");
 size_t comp_bw(const BWdata& bw){
 
     size_t iter = 0;
-    size_t res;
-    double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
-    bool first = true;
 
     // run for all iterations
     for (size_t i = 0; i < bw.max_iterations; i++) {
@@ -64,16 +61,9 @@ size_t comp_bw(const BWdata& bw){
             }
         }
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
-
-        if (first && i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
-            first = false;
-            res = iter;
-        }
-
-        neg_log_likelihood_sum_old = neg_log_likelihood_sum;
     }
 
-    return res;
+    return iter;
 }
 
 
@@ -116,7 +106,6 @@ inline void backward_step(const BWdata& bw) {
         // t = bw.T, base case
         for (size_t n = 0; n < bw.N; n++) {
             bw.beta[(k*bw.T + (bw.T-1))*bw.N + n] = bw.c_norm[k*bw.T + (bw.T-1)];
-            bw.ggamma[(k*bw.T + (bw.T-1))*bw.N + n] = bw.alpha[(k*bw.T + (bw.T-1))*bw.N + n];
         }
 
         // recursion step
@@ -127,7 +116,6 @@ inline void backward_step(const BWdata& bw) {
                     beta_temp += bw.beta[(k*bw.T + (t+1))*bw.N + n1] * bw.trans_prob[n0*bw.N + n1] * bw.emit_prob[n1*bw.M + bw.observations[k*bw.T + (t+1)]];
                 }
                 bw.beta[(k*bw.T + t)*bw.N + n0] = beta_temp * bw.c_norm[k*bw.T + t];
-                bw.ggamma[(k*bw.T + t)*bw.N + n0] = bw.alpha[(k*bw.T + t)*bw.N + n0] * beta_temp;
             }
         }
     }
@@ -135,13 +123,13 @@ inline void backward_step(const BWdata& bw) {
 
 
 inline void compute_gamma(const BWdata& bw) {
-    //for (size_t k = 0; k < bw.K; k++) {
-    //    for (size_t t = 0; t < bw.T; t++) {
-    //        for (size_t n = 0; n < bw.N; n++) {
-    //            
-    //        }
-    //    }
-    //}
+    for (size_t k = 0; k < bw.K; k++) {
+        for (size_t t = 0; t < bw.T; t++) {
+            for (size_t n = 0; n < bw.N; n++) {
+                bw.ggamma[(k*bw.T + t)*bw.N + n] = bw.alpha[(k*bw.T + t)*bw.N + n] * bw.beta[(k*bw.T + t)*bw.N + n] / bw.c_norm[k*bw.T + t];
+            }
+        }
+    }
 
     // sum up bw.ggamma (from t = 0 to bw.T-2; serve as normalizer for bw.trans_prob)
     for (size_t k = 0; k < bw.K; k++) {
@@ -233,4 +221,3 @@ inline void update_emit_prob(const BWdata& bw) {
         }
     }
 }
-
