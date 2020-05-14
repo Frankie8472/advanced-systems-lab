@@ -37,7 +37,7 @@ REGISTER_FUNCTION(comp_bw_vector, "vector", "TODO: Vector Optimized");
 size_t comp_bw_vector(const BWdata& bw){
 
     size_t iter = 0;
-    size_t res;
+    size_t res = 0;
     double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
     bool first = true;
 
