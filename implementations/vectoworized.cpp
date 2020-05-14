@@ -44,7 +44,7 @@ REGISTER_FUNCTION(comp_bw_vectOwOrized, "vectOwOrized", "Vector Optimized: AVX2 
 
 void transpose_matrix(double* output, const double* input, const size_t N, const size_t M);
 void rotate_indices_left(double* output, const double* input, const size_t N, const size_t K, const size_t T);
-void rotate_indices_from_K_T_N_M_to_K_N_M_T(double* output, const double* input, const size_t K, const size_t N, const size_t M, const size_t T);
+void rotate_somehow_last_t_index_gets_value_0_important(double* output, const double* input, const size_t K, const size_t N, const size_t M, const size_t T);
 
 __m256d _mm256_stuff_pd(const __m256d incr_vec, const double* input_array, const size_t index_0, const size_t index_1, const size_t index_2, const size_t index_3);
 __m256d _mm256_sumFourRowsIntoOneCol_pd(const __m256d row_0, const __m256d row_1, const __m256d row_2, const __m256d row_3);
@@ -114,9 +114,14 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
         // this must be here
         // before compute_sigma_sum, used in compute_sigma
         // this is the largest overhead we have ... maybe a way to fix
-        rotate_indices_from_K_T_N_M_to_K_N_M_T(sigma_K_N_N_T, bw.sigma, bw.K, bw.N, bw.N, bw.T);
+        /* EXTREMELY IMPORTANT: WE ASSUME THE VERY LAST ENTRY OF sigma_K_N_N_T (t == bw.T-1) IS ZERO! */
+        rotate_somehow_last_t_index_gets_value_0_important(sigma_K_N_N_T, bw.sigma, bw.K, bw.N, bw.N, bw.T);
+        /* EXTREMELY IMPORTANT: WE ASSUME THE VERY LAST ENTRY OF sigma_K_N_N_T (t == bw.T-1) IS ZERO! */
 
+        /* EXTREMELY IMPORTANT: WE ASSUME THE VERY LAST ENTRY OF sigma_K_N_N_T (t == bw.T-1) IS ZERO! */
         compute_sigma_sum(bw);
+        /* EXTREMELY IMPORTANT: WE ASSUME THE VERY LAST ENTRY OF sigma_K_N_N_T (t == bw.T-1) IS ZERO! */
+
         update_init_prob(bw);
         update_trans_prob(bw);
 
@@ -192,13 +197,13 @@ inline void rotate_indices_left(double* output, const double* input, const size_
 }
 
 
-inline void rotate_indices_from_K_T_N_M_to_K_N_M_T(double* output, const double* input, const size_t K, const size_t N, const size_t M, const size_t T) {
+inline void rotate_somehow_last_t_index_gets_value_0_important(double* output, const double* input, const size_t K, const size_t N, const size_t M, const size_t T) {
     for (size_t k = 0; k < K; k++) {
         for (size_t n = 0; n < N; n++) {
             for (size_t m = 0; m < M; m++) {
                 for (size_t t = 0; t < T; t++) {
                     // not really vectorizable afaik
-                    output[((k*N + n)*M + m)*T + t] = input[((k*T + t)*N + n)*M + m];
+                    output[((k*N + n)*M + m)*T + t] = (t == T-1) ? 0.0 : input[((k*T + t)*N + n)*M + m];
                 }
             }
         }
@@ -808,29 +813,200 @@ inline void compute_sigma(const BWdata& bw) {
 
 inline void compute_sigma_sum(const BWdata& bw) {
 
-    for (size_t k = 0; k < bw.K; k += 1) {
+    for (size_t k = 0; k < bw.K; k += STRIDE_LAYER_K) {
 
         // sum up bw.sigma (from t = 0 to bw.T-1)
-        for (size_t n0 = 0; n0 < bw.N; n0 += 1) {
+        for (size_t n0 = 0; n0 < bw.N; n0 += STRIDE_LAYER_N) {
 
-            for (size_t n1 = 0; n1 < bw.N; n1 += 1) {
+            for (size_t n1 = 0; n1 < bw.N; n1 += STRIDE_LAYER_N) {
 
-                double s_sum = 0.0;
+                __m256d s_sum_kp0_np0_np0 = zeros;
+                __m256d s_sum_kp0_np0_np1 = zeros;
+                __m256d s_sum_kp0_np0_np2 = zeros;
+                __m256d s_sum_kp0_np0_np3 = zeros;
 
-                for (size_t t = 0; t < bw.T-1; t += 1) {
+                __m256d s_sum_kp0_np1_np0 = zeros;
+                __m256d s_sum_kp0_np1_np1 = zeros;
+                __m256d s_sum_kp0_np1_np2 = zeros;
+                __m256d s_sum_kp0_np1_np3 = zeros;
 
-                    //if (t < bw.T - 4) {
+                __m256d s_sum_kp0_np2_np0 = zeros;
+                __m256d s_sum_kp0_np2_np1 = zeros;
+                __m256d s_sum_kp0_np2_np2 = zeros;
+                __m256d s_sum_kp0_np2_np3 = zeros;
 
-                    //} else {
+                __m256d s_sum_kp0_np3_np0 = zeros;
+                __m256d s_sum_kp0_np3_np1 = zeros;
+                __m256d s_sum_kp0_np3_np2 = zeros;
+                __m256d s_sum_kp0_np3_np3 = zeros;
 
-                    //}
+                __m256d s_sum_kp1_np0_np0 = zeros;
+                __m256d s_sum_kp1_np0_np1 = zeros;
+                __m256d s_sum_kp1_np0_np2 = zeros;
+                __m256d s_sum_kp1_np0_np3 = zeros;
 
-                    
-                    s_sum += bw.sigma[((k*bw.T + t)*bw.N + n0)*bw.N + n1];
+                __m256d s_sum_kp1_np1_np0 = zeros;
+                __m256d s_sum_kp1_np1_np1 = zeros;
+                __m256d s_sum_kp1_np1_np2 = zeros;
+                __m256d s_sum_kp1_np1_np3 = zeros;
+
+                __m256d s_sum_kp1_np2_np0 = zeros;
+                __m256d s_sum_kp1_np2_np1 = zeros;
+                __m256d s_sum_kp1_np2_np2 = zeros;
+                __m256d s_sum_kp1_np2_np3 = zeros;
+
+                __m256d s_sum_kp1_np3_np0 = zeros;
+                __m256d s_sum_kp1_np3_np1 = zeros;
+                __m256d s_sum_kp1_np3_np2 = zeros;
+                __m256d s_sum_kp1_np3_np3 = zeros;
+
+                __m256d s_sum_kp2_np0_np0 = zeros;
+                __m256d s_sum_kp2_np0_np1 = zeros;
+                __m256d s_sum_kp2_np0_np2 = zeros;
+                __m256d s_sum_kp2_np0_np3 = zeros;
+
+                __m256d s_sum_kp2_np1_np0 = zeros;
+                __m256d s_sum_kp2_np1_np1 = zeros;
+                __m256d s_sum_kp2_np1_np2 = zeros;
+                __m256d s_sum_kp2_np1_np3 = zeros;
+
+                __m256d s_sum_kp2_np2_np0 = zeros;
+                __m256d s_sum_kp2_np2_np1 = zeros;
+                __m256d s_sum_kp2_np2_np2 = zeros;
+                __m256d s_sum_kp2_np2_np3 = zeros;
+
+                __m256d s_sum_kp2_np3_np0 = zeros;
+                __m256d s_sum_kp2_np3_np1 = zeros;
+                __m256d s_sum_kp2_np3_np2 = zeros;
+                __m256d s_sum_kp2_np3_np3 = zeros;
+
+                __m256d s_sum_kp3_np0_np0 = zeros;
+                __m256d s_sum_kp3_np0_np1 = zeros;
+                __m256d s_sum_kp3_np0_np2 = zeros;
+                __m256d s_sum_kp3_np0_np3 = zeros;
+
+                __m256d s_sum_kp3_np1_np0 = zeros;
+                __m256d s_sum_kp3_np1_np1 = zeros;
+                __m256d s_sum_kp3_np1_np2 = zeros;
+                __m256d s_sum_kp3_np1_np3 = zeros;
+
+                __m256d s_sum_kp3_np2_np0 = zeros;
+                __m256d s_sum_kp3_np2_np1 = zeros;
+                __m256d s_sum_kp3_np2_np2 = zeros;
+                __m256d s_sum_kp3_np2_np3 = zeros;
+
+                __m256d s_sum_kp3_np3_np0 = zeros;
+                __m256d s_sum_kp3_np3_np1 = zeros;
+                __m256d s_sum_kp3_np3_np2 = zeros;
+                __m256d s_sum_kp3_np3_np3 = zeros;
+
+                for (size_t t = 0; t < bw.T-1; t += STRIDE_LAYER_T_NON_RECURSIVE) {
+
+                    /* EXTREMELY IMPORTANT: WE ASSUME THE VERY LAST ENTRY OF sigma (t == bw.T-1) IS ZERO! */
+
+                    s_sum_kp0_np0_np0 = _mm256_add_pd(s_sum_kp0_np0_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 0))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp0_np0_np1 = _mm256_add_pd(s_sum_kp0_np0_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 0))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp0_np0_np2 = _mm256_add_pd(s_sum_kp0_np0_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 0))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp0_np0_np3 = _mm256_add_pd(s_sum_kp0_np0_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 0))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp0_np1_np0 = _mm256_add_pd(s_sum_kp0_np1_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 1))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp0_np1_np1 = _mm256_add_pd(s_sum_kp0_np1_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 1))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp0_np1_np2 = _mm256_add_pd(s_sum_kp0_np1_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 1))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp0_np1_np3 = _mm256_add_pd(s_sum_kp0_np1_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 1))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp0_np2_np0 = _mm256_add_pd(s_sum_kp0_np2_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 2))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp0_np2_np1 = _mm256_add_pd(s_sum_kp0_np2_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 2))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp0_np2_np2 = _mm256_add_pd(s_sum_kp0_np2_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 2))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp0_np2_np3 = _mm256_add_pd(s_sum_kp0_np2_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 2))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp0_np3_np0 = _mm256_add_pd(s_sum_kp0_np3_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 3))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp0_np3_np1 = _mm256_add_pd(s_sum_kp0_np3_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 3))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp0_np3_np2 = _mm256_add_pd(s_sum_kp0_np3_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 3))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp0_np3_np3 = _mm256_add_pd(s_sum_kp0_np3_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 0)*bw.N + (n0 + 3))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp1_np0_np0 = _mm256_add_pd(s_sum_kp1_np0_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 0))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp1_np0_np1 = _mm256_add_pd(s_sum_kp1_np0_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 0))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp1_np0_np2 = _mm256_add_pd(s_sum_kp1_np0_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 0))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp1_np0_np3 = _mm256_add_pd(s_sum_kp1_np0_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 0))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp1_np1_np0 = _mm256_add_pd(s_sum_kp1_np1_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 1))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp1_np1_np1 = _mm256_add_pd(s_sum_kp1_np1_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 1))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp1_np1_np2 = _mm256_add_pd(s_sum_kp1_np1_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 1))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp1_np1_np3 = _mm256_add_pd(s_sum_kp1_np1_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 1))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp1_np2_np0 = _mm256_add_pd(s_sum_kp1_np2_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 2))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp1_np2_np1 = _mm256_add_pd(s_sum_kp1_np2_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 2))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp1_np2_np2 = _mm256_add_pd(s_sum_kp1_np2_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 2))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp1_np2_np3 = _mm256_add_pd(s_sum_kp1_np2_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 2))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp1_np3_np0 = _mm256_add_pd(s_sum_kp1_np3_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 3))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp1_np3_np1 = _mm256_add_pd(s_sum_kp1_np3_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 3))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp1_np3_np2 = _mm256_add_pd(s_sum_kp1_np3_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 3))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp1_np3_np3 = _mm256_add_pd(s_sum_kp1_np3_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 1)*bw.N + (n0 + 3))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp2_np0_np0 = _mm256_add_pd(s_sum_kp2_np0_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 0))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp2_np0_np1 = _mm256_add_pd(s_sum_kp2_np0_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 0))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp2_np0_np2 = _mm256_add_pd(s_sum_kp2_np0_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 0))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp2_np0_np3 = _mm256_add_pd(s_sum_kp2_np0_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 0))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp2_np1_np0 = _mm256_add_pd(s_sum_kp2_np1_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 1))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp2_np1_np1 = _mm256_add_pd(s_sum_kp2_np1_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 1))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp2_np1_np2 = _mm256_add_pd(s_sum_kp2_np1_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 1))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp2_np1_np3 = _mm256_add_pd(s_sum_kp2_np1_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 1))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp2_np2_np0 = _mm256_add_pd(s_sum_kp2_np2_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 2))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp2_np2_np1 = _mm256_add_pd(s_sum_kp2_np2_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 2))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp2_np2_np2 = _mm256_add_pd(s_sum_kp2_np2_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 2))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp2_np2_np3 = _mm256_add_pd(s_sum_kp2_np2_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 2))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp2_np3_np0 = _mm256_add_pd(s_sum_kp2_np3_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 3))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp2_np3_np1 = _mm256_add_pd(s_sum_kp2_np3_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 3))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp2_np3_np2 = _mm256_add_pd(s_sum_kp2_np3_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 3))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp2_np3_np3 = _mm256_add_pd(s_sum_kp2_np3_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 2)*bw.N + (n0 + 3))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp3_np0_np0 = _mm256_add_pd(s_sum_kp3_np0_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 0))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp3_np0_np1 = _mm256_add_pd(s_sum_kp3_np0_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 0))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp3_np0_np2 = _mm256_add_pd(s_sum_kp3_np0_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 0))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp3_np0_np3 = _mm256_add_pd(s_sum_kp3_np0_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 0))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp3_np1_np0 = _mm256_add_pd(s_sum_kp3_np1_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 1))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp3_np1_np1 = _mm256_add_pd(s_sum_kp3_np1_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 1))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp3_np1_np2 = _mm256_add_pd(s_sum_kp3_np1_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 1))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp3_np1_np3 = _mm256_add_pd(s_sum_kp3_np1_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 1))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp3_np2_np0 = _mm256_add_pd(s_sum_kp3_np2_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 2))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp3_np2_np1 = _mm256_add_pd(s_sum_kp3_np2_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 2))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp3_np2_np2 = _mm256_add_pd(s_sum_kp3_np2_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 2))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp3_np2_np3 = _mm256_add_pd(s_sum_kp3_np2_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 2))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    s_sum_kp3_np3_np0 = _mm256_add_pd(s_sum_kp3_np3_np0, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 3))*bw.N + (n1 + 0))*bw.T + t)));
+                    s_sum_kp3_np3_np1 = _mm256_add_pd(s_sum_kp3_np3_np1, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 3))*bw.N + (n1 + 1))*bw.T + t)));
+                    s_sum_kp3_np3_np2 = _mm256_add_pd(s_sum_kp3_np3_np2, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 3))*bw.N + (n1 + 2))*bw.T + t)));
+                    s_sum_kp3_np3_np3 = _mm256_add_pd(s_sum_kp3_np3_np3, _mm256_load_pd(sigma_K_N_N_T + ((((k + 3)*bw.N + (n0 + 3))*bw.N + (n1 + 3))*bw.T + t)));
+
+                    /* EXTREMELY IMPORTANT: WE ASSUME THE VERY LAST ENTRY OF sigma (t == bw.T-1) IS ZERO! */
 
                 }
 
-                bw.sigma_sum[(k*bw.N + n0)*bw.N + n1] = s_sum;
+                _mm256_store_pd((bw.sigma_sum + (((k + 0)*bw.N + (n0 + 0))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp0_np0_np0, s_sum_kp0_np0_np1, s_sum_kp0_np0_np2, s_sum_kp0_np0_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 0)*bw.N + (n0 + 1))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp0_np1_np0, s_sum_kp0_np1_np1, s_sum_kp0_np1_np2, s_sum_kp0_np1_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 0)*bw.N + (n0 + 2))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp0_np2_np0, s_sum_kp0_np2_np1, s_sum_kp0_np2_np2, s_sum_kp0_np2_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 0)*bw.N + (n0 + 3))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp0_np3_np0, s_sum_kp0_np3_np1, s_sum_kp0_np3_np2, s_sum_kp0_np3_np3));
+
+                _mm256_store_pd((bw.sigma_sum + (((k + 1)*bw.N + (n0 + 0))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp1_np0_np0, s_sum_kp1_np0_np1, s_sum_kp1_np0_np2, s_sum_kp1_np0_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 1)*bw.N + (n0 + 1))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp1_np1_np0, s_sum_kp1_np1_np1, s_sum_kp1_np1_np2, s_sum_kp1_np1_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 1)*bw.N + (n0 + 2))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp1_np2_np0, s_sum_kp1_np2_np1, s_sum_kp1_np2_np2, s_sum_kp1_np2_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 1)*bw.N + (n0 + 3))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp1_np3_np0, s_sum_kp1_np3_np1, s_sum_kp1_np3_np2, s_sum_kp1_np3_np3));
+
+                _mm256_store_pd((bw.sigma_sum + (((k + 2)*bw.N + (n0 + 0))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp2_np0_np0, s_sum_kp2_np0_np1, s_sum_kp2_np0_np2, s_sum_kp2_np0_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 2)*bw.N + (n0 + 1))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp2_np1_np0, s_sum_kp2_np1_np1, s_sum_kp2_np1_np2, s_sum_kp2_np1_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 2)*bw.N + (n0 + 2))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp2_np2_np0, s_sum_kp2_np2_np1, s_sum_kp2_np2_np2, s_sum_kp2_np2_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 2)*bw.N + (n0 + 3))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp2_np3_np0, s_sum_kp2_np3_np1, s_sum_kp2_np3_np2, s_sum_kp2_np3_np3));
+
+                _mm256_store_pd((bw.sigma_sum + (((k + 3)*bw.N + (n0 + 0))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp3_np0_np0, s_sum_kp3_np0_np1, s_sum_kp3_np0_np2, s_sum_kp3_np0_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 3)*bw.N + (n0 + 1))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp3_np1_np0, s_sum_kp3_np1_np1, s_sum_kp3_np1_np2, s_sum_kp3_np1_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 3)*bw.N + (n0 + 2))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp3_np2_np0, s_sum_kp3_np2_np1, s_sum_kp3_np2_np2, s_sum_kp3_np2_np3));
+                _mm256_store_pd((bw.sigma_sum + (((k + 3)*bw.N + (n0 + 3))*bw.N + n1)), _mm256_sumFourRowsIntoOneCol_pd(s_sum_kp3_np3_np0, s_sum_kp3_np3_np1, s_sum_kp3_np3_np2, s_sum_kp3_np3_np3));
 
             }
 
