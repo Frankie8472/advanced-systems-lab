@@ -94,9 +94,14 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
 
     /* END INIT HELPER STUFF */
 
+    size_t itera = 0;
+    size_t res;
+    double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
+    bool first = true;
+
     // run for all iterations
-    size_t iter = 0;
-    for (iter = 0; iter < bw.max_iterations; iter++) {
+    for (size_t iter = 0; iter < bw.max_iterations; iter++) {
+        itera++;
 
         // this must be here (before the backward_step)
         transpose_matrix(emit_prob_transpose, bw.emit_prob, bw.N, bw.M); // actually worth
@@ -126,6 +131,13 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
         }
         bw.neg_log_likelihoods[iter] = neg_log_likelihood_sum;
 
+        if (first && iter > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
+            first = false;
+            res = itera;
+        }
+
+        neg_log_likelihood_sum_old = neg_log_likelihood_sum;
+
     }
 
     /* BEGIN FREEING HELPER STUFF */
@@ -141,7 +153,7 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
 
     /* END FREEING HELPER STUFF */
 
-    return iter;
+    return res;
 }
 
 

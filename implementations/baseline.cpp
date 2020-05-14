@@ -40,6 +40,9 @@ SET_BASELINE(comp_bw, "Baseline");
 size_t comp_bw(const BWdata& bw){
 
     size_t iter = 0;
+    size_t res;
+    double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
+    bool first = true;
 
     // run for all iterations
     for (size_t i = 0; i < bw.max_iterations; i++) {
@@ -61,9 +64,16 @@ size_t comp_bw(const BWdata& bw){
             }
         }
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
+
+        if (first && i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
+            first = false;
+            res = iter;
+        }
+
+        neg_log_likelihood_sum_old = neg_log_likelihood_sum;
     }
 
-    return iter;
+    return res;
 }
 
 

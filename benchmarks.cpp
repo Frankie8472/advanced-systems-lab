@@ -51,6 +51,9 @@ total: (1 add + 1 mul)*K*N²*T + (2 add + 5 muls)*K*N²*(T-1) + (2 adds)*K*N² +
 
 int flops;
 
+// adjust max_iterations if it's too slow
+size_t max_iterations = 100;
+
 void perf_test(compute_bw_func func, const BWdata& bw){
 
     double cycles = 0.;
@@ -124,9 +127,10 @@ void perf_test(compute_bw_func func, const BWdata& bw){
 
     cycles = total_cycles;
     iter = total_iter;
-    perf =  round((100.0 * iter*flops) / cycles) / 100.0;
+    perf =  round((100.0 * max_iterations*flops) / cycles) / 100.0;
 
-    printf("Iterations: %ld\n", iter);
+    printf("Total iterations: %ld\n", max_iterations);
+    printf("Iterations to converge: %ld\n", iter);
     printf("Cycles: %f\n", round(cycles));
     printf("Performance: %f\n", perf);
 }
@@ -154,8 +158,6 @@ int main(int argc, char **argv) {
     const size_t N = 16;
     const size_t M = 16;
     const size_t T = 32;
-    // adjust max_iterations if it's too slow
-    size_t max_iterations = 100;
 
     // Parse arguments
     while(true){
