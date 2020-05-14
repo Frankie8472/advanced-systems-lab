@@ -270,7 +270,7 @@ inline void compute_gamma(const BWdata& bw) {
     }
 }
 
-
+// unused
 inline void compute_sigma(const BWdata& bw) {
     // Init
     double sigma, sigma_sum, alpha, beta, trans_prob, emit_prob;
@@ -326,7 +326,7 @@ inline void compute_sigma(const BWdata& bw) {
     }
 }
 
-
+//unused
 inline void update_init_prob(const BWdata& bw) {
     // Init
     double g0_sum;
