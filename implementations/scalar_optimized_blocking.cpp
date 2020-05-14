@@ -31,7 +31,7 @@ void update_emit_prob(const BWdata& bw);
 size_t comp_bw_scalar_blocking(const BWdata& bw);
 
 //variable for the innermost block size; must be smaller than min(N,K,T-2)
-size_t innermost_block_size = 8;
+size_t innermost_block_size = 12;
 
 size_t innermost_block_size_minus_one = innermost_block_size - 1;
 
@@ -755,52 +755,49 @@ inline void update_trans_prob(const BWdata& bw) {
 inline void update_emit_prob(const BWdata& bw) {
     // Init
     double numerator_sum, denominator_sum, ggamma_cond_sum;
-    size_t kTN, kN;
-    size_t kTN2, kN2;
-    size_t kTN3, kN3;
-    size_t kTN4, kN4;
 
     size_t n_n0;
     size_t k1, k2, k3;
 
-    size_t kTt, kT;
+    size_t kTt, kT, kTt_t0;
+
+    size_t kT2, kTt2, kTt_t02;
+    size_t kT3, kTt3, kTt_t03;
+    size_t kT4, kTt4, kTt_t04;
 
     size_t T_1 = bw.T-1;
 
     // add last bw.T-step to bw.gamma_sum
-    for (size_t k = 0; k < bw.K; k+=4) {
+    size_t k = 0;
+    for (; k < bw.K-3; k+=4) {
         k1 = k + 1;
         k2 = k + 2;
         k3 = k + 3;
 
-        kTN = (k*bw.T + T_1)*bw.N;
-        kTN2 = (k1*bw.T + T_1)*bw.N;
-        kTN3 = (k2*bw.T + T_1)*bw.N;
-        kTN4 = (k3*bw.T + T_1)*bw.N;
-
-        kN = k*bw.N;
-        kN2 = k1*bw.N;
-        kN3 = k2*bw.N;
-        kN4 = k3*bw.N;
-
         size_t n = 0;
         for (; n < bw.N-innermost_block_size_minus_one; n+=innermost_block_size) {
 
-            for (size_t n0 = 0; n0 < innermost_block_size; n0++){
-                n_n0 = n + n0;
+            for (size_t k0 = 0; k0 < 4; k0 ++){
+                for (size_t n0 = 0; n0 < innermost_block_size; n0++){
+                    n_n0 = n + n0;
 
-                bw.gamma_sum[kN + n_n0] += bw.ggamma[kTN + n_n0];
-                bw.gamma_sum[kN2 + n_n0] += bw.ggamma[kTN2 + n_n0];
-                bw.gamma_sum[kN3 + n_n0] += bw.ggamma[kTN3 + n_n0];
-                bw.gamma_sum[kN4 + n_n0] += bw.ggamma[kTN4 + n_n0];
+                    bw.gamma_sum[(k+k0)*bw.N + n_n0] += bw.ggamma[((k+k0)*bw.T + T_1)*bw.N + n_n0];
+                }
             }
+
         }
 
+
         for (; n < bw.N; n++){
-            bw.gamma_sum[kN + n] += bw.ggamma[kTN + n];
-            bw.gamma_sum[kN2 + n] += bw.ggamma[kTN2 + n];
-            bw.gamma_sum[kN3 + n] += bw.ggamma[kTN3 + n];
-            bw.gamma_sum[kN4 + n] += bw.ggamma[kTN4 + n];
+            for (size_t k0 = 0; k0 < 4; k0 ++){
+                bw.gamma_sum[(k+k0)*bw.N + n] += bw.ggamma[((k+k0)*bw.T + T_1)*bw.N + n];
+            }
+        }
+    }
+
+    for (; k < bw.K; k++) {
+        for (size_t n = 0; n < bw.N; n++) {
+            bw.gamma_sum[k*bw.N + n] += bw.ggamma[(k*bw.T + T_1)*bw.N + n];
         }
     }
 
@@ -809,17 +806,72 @@ inline void update_emit_prob(const BWdata& bw) {
         for (size_t n = 0; n < bw.N; n++) {
             numerator_sum = 0.0;
             denominator_sum = 0.0;
-            for (size_t k = 0; k < bw.K; k++) {
+
+            for (size_t k = 0; k < bw.K; k+=4) {
+                k1 = k + 1;
+                k2 = k + 2;
+                k3 = k + 3;
+
                 ggamma_cond_sum = 0.0;
+
                 kT = k*bw.T;
-                for (size_t t = 0; t < bw.T; t++) {
+                kT2 = k1*bw.T;
+                kT3 = k2*bw.T;
+                kT4 = k3*bw.T;
+
+                size_t t = 0;
+                for (; t < bw.T-innermost_block_size_minus_one; t+=innermost_block_size) {
                     kTt = kT + t;
+                    kTt2 = kT2 + t;
+                    kTt3 = kT3 + t;
+                    kTt4 = kT4 + t;
+
+                    for (size_t t0 = 0; t0 < innermost_block_size; t0++){
+                        kTt_t0 = kTt + t0;
+                        kTt_t02 = kTt2 + t0;
+                        kTt_t03 = kTt3 + t0;
+                        kTt_t04 = kTt4 + t0;
+
+                        if (bw.observations[kTt_t0] == m) {
+                            ggamma_cond_sum += bw.ggamma[kTt_t0*bw.N + n];
+                        }
+                        if (bw.observations[kTt_t02] == m) {
+                            ggamma_cond_sum += bw.ggamma[kTt_t02*bw.N + n];
+                        }
+                        if (bw.observations[kTt_t03] == m) {
+                            ggamma_cond_sum += bw.ggamma[kTt_t03*bw.N + n];
+                        }
+                        if (bw.observations[kTt_t04] == m) {
+                            ggamma_cond_sum += bw.ggamma[kTt_t04*bw.N + n];
+                        }
+                    }
+                }
+
+                for (; t < bw.T; t++){
+                    kTt = kT + t;
+                    kTt2 = kT2 + t;
+                    kTt3 = kT3 + t;
+                    kTt4 = kT4 + t;
+
                     if (bw.observations[kTt] == m) {
                         ggamma_cond_sum += bw.ggamma[kTt*bw.N + n];
                     }
+                    if (bw.observations[kTt2] == m) {
+                        ggamma_cond_sum += bw.ggamma[kTt2*bw.N + n];
+                    }
+                    if (bw.observations[kTt3] == m) {
+                        ggamma_cond_sum += bw.ggamma[kTt3*bw.N + n];
+                    }
+                    if (bw.observations[kTt4] == m) {
+                        ggamma_cond_sum += bw.ggamma[kTt4*bw.N + n];
+                    }
                 }
+
                 numerator_sum += ggamma_cond_sum;
                 denominator_sum += bw.gamma_sum[k*bw.N + n];
+                denominator_sum += bw.gamma_sum[k1*bw.N + n];
+                denominator_sum += bw.gamma_sum[k2*bw.N + n];
+                denominator_sum += bw.gamma_sum[k3*bw.N + n];
             }
             bw.emit_prob[n*bw.M + m] = numerator_sum / denominator_sum;
         }
