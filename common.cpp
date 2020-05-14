@@ -1,10 +1,10 @@
 #include "common.h"
 
-std::vector<compute_bw_func> *FuncRegister::user_funcs = nullptr;
-std::vector<std::string> *FuncRegister::func_names = nullptr;
-std::vector<std::string> *FuncRegister::func_descs = nullptr;
+std::vector<compute_bw_func> *FuncRegister::user_funcs = NULL;
+std::vector<std::string> *FuncRegister::func_names = NULL;
+std::vector<std::string> *FuncRegister::func_descs = NULL;
 std::string FuncRegister::baseline_name = "";
-compute_bw_func FuncRegister::baseline_func = nullptr;
+compute_bw_func FuncRegister::baseline_func = NULL;
 
 void FuncRegister::add_function(compute_bw_func f, const std::string& name, const std::string& description){
     if(!user_funcs)

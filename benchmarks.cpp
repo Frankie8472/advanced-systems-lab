@@ -15,9 +15,9 @@
     -----------------------------------------------------------------------------------
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
+#include <cstdlib>
+#include <cstdio>
+#include <ctime>
 #include <climits>
 #include <vector>
 #include <set>
@@ -26,6 +26,7 @@
 #include "tsc_x86.h"
 #include "helper_utilities.h"
 #include "common.h"
+#include <random>
 
 #define NUM_RUNS 100
 #define CYCLES_REQUIRED 1e8
