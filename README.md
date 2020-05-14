@@ -27,9 +27,25 @@ The project generates two executables: `benchmarks` nad `verifications`.
 
 ## Running the project
 
-`benchmarks` executes the performance benchmark test without verifications if the implementations are correct. It requires a number as an argument. This is the number of maximum iterations the algorithm is allowed to execute. 
+`benchmarks` executes the performance benchmark test without verifications if the implementations are correct. 
 
-`verification` checks if the implementations behave correctly.
+`benchmarks` supports certain arguments:
+
+```
+Usage: ./benchmarks [OPTIONS]
+Benchmarks the registered implementations against the registered baseline.
+
+Options:
+  -h, --help			Prints this message and exits
+  -t, --test			Perform test that can be used for the report (Not yet implemented)
+  -o, --only <name>		Only execute the implementation with the given name (case-sensitive). 
+  				 Can occur multiple times and is compatible with --test. The baseline is
+  				 always run.
+      --list			Lists all available implementations and exits
+      --max-iteration <value>	Sets the max-iteration to a value
+```
+
+`verification` checks if the implementations behave correctly and compares the implementations against the baseline that is verified differently.
 
 ## Goal
 
@@ -100,8 +116,10 @@ size_t func_name(const BWdata& bw){...}
 To register your function in the benchmark system add the following line to your file. You can register multiple functions in one file.
 
 ```C
-REGISTER_FUNCTION(func_name, "A description about the implementation");
+REGISTER_FUNCTION(func_name, "name", "A description about the implementation");
 ```
+
+The name string should be writable in the commandline, as it is used to limit which implemetations should be benchmarked.
 
 **CAUTION**: Be aware that you cannot name your function the same as another implementation in a different file. The linker is not able to do that right now.
 
