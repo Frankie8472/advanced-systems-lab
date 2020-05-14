@@ -77,7 +77,7 @@ struct BWdata {
         gamma_sum = (double *)aligned_alloc(32, K*N * sizeof(double));
         sigma_sum = (double *)aligned_alloc(32, K*N*N * sizeof(double));
 
-        assert(observations == nullptr && "Failed to allocate observations");
+        assert(observations != nullptr && "Failed to allocate observations");
         assert(init_prob != nullptr && "Failed to allocate init_prob");
         assert(trans_prob != nullptr && "Failed to allocate trans_prob");
         assert(emit_prob != nullptr && "Failed to allocate emit_prob");
@@ -172,9 +172,9 @@ public:
      * Set the function that is considered the baseline and other
      * implementations are compared against. There can only be one baseline
      */
-    static void set_baseline(compute_bw_func f, std::string name);
+    static void set_baseline(compute_bw_func f, const std::string& name);
 
-    static void add_function(compute_bw_func f, std::string name, std::string description);
+    static void add_function(compute_bw_func f, const std::string& name, const std::string& description);
     
     static void printRegisteredFuncs();
 
