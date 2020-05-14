@@ -95,7 +95,7 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
     /* END INIT HELPER STUFF */
 
     size_t itera = 0;
-    size_t res;
+    size_t res = 0;
     double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
     bool first = true;
 
