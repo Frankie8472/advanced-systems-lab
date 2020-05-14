@@ -37,9 +37,11 @@ REGISTER_FUNCTION(comp_bw_scalar_reorder, "scalar-reorder", "Scalar Optimized: r
 size_t comp_bw_scalar_reorder(const BWdata& bw){
 
     size_t iter = 0;
+    size_t res;
+    double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
+    bool first = true;
 
     // run for all iterations
-    double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
     for (size_t i = 0; i < bw.max_iterations; i++) {
         iter++;
 
@@ -58,9 +60,16 @@ size_t comp_bw_scalar_reorder(const BWdata& bw){
             }
         }
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
+
+        if (first && i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
+            first = false;
+            res = iter;
+        }
+
+        neg_log_likelihood_sum_old = neg_log_likelihood_sum;
     }
 
-    return iter;
+    return res;
 }
 
 
@@ -261,7 +270,7 @@ inline void compute_gamma(const BWdata& bw) {
     }
 }
 
-
+// unused
 inline void compute_sigma(const BWdata& bw) {
     // Init
     double sigma, sigma_sum, alpha, beta, trans_prob, emit_prob;
@@ -317,7 +326,7 @@ inline void compute_sigma(const BWdata& bw) {
     }
 }
 
-
+//unused
 inline void update_init_prob(const BWdata& bw) {
     // Init
     double g0_sum;

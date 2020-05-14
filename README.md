@@ -68,6 +68,44 @@ Furthermore, to check equality for doubles, we use EPSILON 1e-6, to not get caug
 Lastly, we omitted the convergence criterion by the minimization of the monotonously decreasing negative log likelihood sequence, because it adds an unnecessary source of randomness.
 Note that Expectation-Maximization is provably guaranteed to not change after convergence, so running more than fewer iterations causes no harm, except for overfitting (irrelevant for our purposes) and increased runtime (wanted for benchmarking).
 
+## Analysis
+
+Our reordering removed `K*N*T divs` from the algorithm. In the file `implementations/baseline_old.cpp` we have the original implementation with the `K*N*T divs`. To match the flop count, we did that optimization that removed those flops also in the baseline.
+
+Cost analysis (add, mul and div is one flop) for the original baseline for one iteration:
+forward: `(1 add + 1 mul)*K*N*N*T + (1 add + 2 mults)*K*N*T + (1 add + 2 mults)*K*N + (1 div)*K*T + (1 div)*K`
+backward: `(1 add + 2 muls)*K*N*N*T + (1 mult)*K*N*T`
+compute gamma: `(1 div + 1 mult)*K*N*T + (1 add)*K*N*T`
+compute sigma: `(1 add + 3 mults)*K*N*N*T`
+update init: `(1 add)*K*N + (1 div)*N`
+update trans: `(2 adds)*K*N*N + (1 div)*N*N`
+update emit: `(2 adds)*N*M*K + (1 add)*K*N*T + (1 add)*K*N + (1 div)*N*M`
+neg-log-likelyhood: `K*T*(add)`
+
+total: `K*N*N*T(3 add + 6 mults) + K*N*T(3 add + 4 mult + div) + K*N(3 add + 2 mult) + K*T(div + add) + K*(1 div) + K*N*N(2 add) + N*N*(div) + K*N*M(2 add) + N*M(1 div)`
+
+adds:  3KNNT + 3KNT + 3KN + KT + 2KNN + 2KNM
+mults: 6KNNT + 4KNT + 2KN
+div:   KNT + KT + K + N + NN + NM
+
+For the new baseline with the reordering optimization:
+forward: `(1 add + 1 mul)*K*N*N*T + (1 add + 2 mults)*K*N*T + (1 add + 2 mults)*K*N + (1 div)*K*T + (1 div)*K`
+backward: `(1 add + 2 muls)*K*N*N*T + (2 mult)*K*N*T`
+compute gamma: `(1 add)*K*N*T`
+compute sigma: `(1 add + 3 mults)*K*N*N*T`
+update init: `(1 add)*K*N + (1 div)*N`
+update trans: `(2 adds)*K*N*N + (1 div)*N*N`
+update emit: `(2 adds)*N*M*K + (1 add)*K*N*T + (1 add)*K*N + (1 div)*N*M`
+neg-log-likelyhood: `K*T*(add)`
+
+total: `K*N*N*T(3 add + 6 mults) + K*N*T(3 add + 4 mult) + K*N(3 add + 2 mult) + K*T(div + add) + K*(1 div) + K*N*N(2 add) + N*N*(div) + K*N*M(2 add) + N*M(1 div)`
+
+adds:  3KNNT + 3KNT + 3KN + KT + 2KNN + 2KNM
+mults: 6KNNT + 4KNT + 2KN
+div:   KT + K + N + NN + NM
+
+
+
 ## Verification
 
 ### Baseline
