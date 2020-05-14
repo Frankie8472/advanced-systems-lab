@@ -22,6 +22,7 @@
 #include <cstring>
 #include <vector>
 #include <stdlib.h>
+#include <assert.h>
 
 #define EPSILON 1e-6
 
@@ -76,18 +77,18 @@ struct BWdata {
         gamma_sum = (double *)aligned_alloc(32, K*N * sizeof(double));
         sigma_sum = (double *)aligned_alloc(32, K*N*N * sizeof(double));
 
-        if (observations == NULL) exit(2);
-        if (init_prob == NULL) exit(2);
-        if (trans_prob == NULL) exit(2);
-        if (emit_prob == NULL) exit(2);
-        if (neg_log_likelihoods == NULL) exit(2);
-        if (c_norm == NULL) exit(2);
-        if (alpha == NULL) exit(2);
-        if (beta == NULL) exit(2);
-        if (ggamma == NULL) exit(2);
-        if (sigma == NULL) exit(2);
-        if (gamma_sum == NULL) exit(2);
-        if (sigma_sum == NULL) exit(2);
+        assert(observations == nullptr && "Failed to allocate observations");
+        assert(init_prob != nullptr && "Failed to allocate init_prob");
+        assert(trans_prob != nullptr && "Failed to allocate trans_prob");
+        assert(emit_prob != nullptr && "Failed to allocate emit_prob");
+        assert(neg_log_likelihoods != nullptr && "Failed to allocate neg_log_likelihoods");
+        assert(c_norm != nullptr && "Failed to allocate c_norm");
+        assert(alpha != nullptr && "Failed to allocate alpha");
+        assert(beta != nullptr && "Failed to allocate beta");
+        assert(ggamma != nullptr && "Failed to allocate ggamma");
+        assert(sigma != nullptr && "Failed to allocate sigma");
+        assert(gamma_sum != nullptr && "Failed to allocate gamma_sum");
+        assert(sigma_sum != nullptr && "Failed to allocate sigma_sum");
     }
     
     /**
@@ -107,9 +108,9 @@ struct BWdata {
         gamma_sum = other.gamma_sum;
         sigma_sum = other.sigma_sum;
 
-        if (init_prob == NULL) exit(2);
-        if (trans_prob == NULL) exit(2);
-        if (emit_prob == NULL) exit(2);
+        assert(init_prob != nullptr && "Failed to allocate init_prob");
+        assert(trans_prob != nullptr && "Failed to allocate trans_prob");
+        assert(emit_prob != nullptr && "Failed to allocate emit_prob");
 
         memcpy(init_prob, other.init_prob, N * sizeof(double));
         memcpy(trans_prob, other.trans_prob, N * N * sizeof(double));
@@ -168,7 +169,7 @@ class FuncRegister
 public:
 
     /**
-     * Set the function that is considererd the baseline and other 
+     * Set the function that is considered the baseline and other
      * implementations are compared against. There can only be one baseline
      */
     static void set_baseline(compute_bw_func f, std::string name);
