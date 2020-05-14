@@ -18,8 +18,8 @@
 #if !defined(__BW_HELPER_UTILITIES_H)
 #define __BW_HELPER_UTILITIES_H
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <random>
 
 #include "common.h"
@@ -28,53 +28,67 @@
 #define PRINT_FAIL(msg, ...) printf("\x1b[1;31mFAIL:\x1b[0m " msg "\n",  ##__VA_ARGS__)
 #define PRINT_VIOLATION(msg, num, ...) printf("\x1b[1;35m%zu VIOLATIONS:\x1b[0m " msg "\n", num,  ##__VA_ARGS__)
 
-// initialization functions
-
+/**
+ * Initializes the given BWdata with uniform at random data.
+ * Initialized Data: init_prob, trans_prob, emit_prob, observations
+ */
 void initialize_uar(const BWdata& bw);
+
+/**
+ * Initializes the given BWdata with random data.
+ * Initialized Data: init_prob, trans_prob, emit_prob, observations
+ */
 void initialize_random(const BWdata& bw);
 
 /**
- * TODO description
+ * Checks and verifies that BWdata has the following properties:
+ * - Initial distribution sums to 1.0
+ * - Rows of the transition distribution sums to 1.0
+ * - Rows of the emission distribution sums to 1.0
+ * - Negative log likelihood sequence must be monotonically increasing
  *
- * returns: True if there was no error, false otherwise
+ * Returns: True if there was no error, false otherwise
  */
 bool check_and_verify(const BWdata& bw);
 
+/**
+ * Prints the following states of the given BWdata:
+ * - Initialization probabilities
+ * - Transition probabilities
+ * - Emission probabilities
+ */
 void print_states(const BWdata& bw);
 
 /**
- * Description
- * Useful for debugging
- * Only use for small values K, N, M, T
- * Prints all (!) contents of input BWdata& bw
+ * Prints all the data from the BWdata struct
+ * Used for debugging with small values for K, N, M, T
  */
 void print_BWdata(const BWdata& bw);
 
+/**
+ * Prints additional information in addition to print_BWdata
+ * Additional information: iteration_variable, message
+ */
 inline void print_BWdata_debug_helper(const BWdata& bw, const size_t iteration_variable, const char* message) {
     printf("\n\x1b[1;33m[i = %zu] %s\x1b[0m", iteration_variable, message);
     print_BWdata(bw);
 }
 
 /**
- * INPUT
- * two const BWdata& structs to compare against
- * OUTPUT
- * true if both structs contain the same below mentioned data up to some numerical EPSILON
- * DESCRIPTION
- * checks whether the following match up to an numerical EPSILON:
- * Initialization Probabilities, Transition Probabilities and Emission Probabilities
+ * Compares only the following fields of the two given BWdata structs (considering EPSILON)
+ * - Initialization Probabilities
+ * - Transition Probabilities
+ * - Emission Probabilities
+ *
+ * Returns: true if the checked fields of both structs contain the same data up to EPSILON
  * */
 bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& bw2);
 
 /**
- * INPUT
- * two const BWdata& structs to compare against
- * OUTPUT
- * true if both structs contain the same data up to some numerical EPSILON
- * DESCRIPTION
- * checks whether each single field of each variable and array match up to an EPSILON
+ * Compares all fields of the two given BWdata structs (considering EPSILON)
+ *
+ * Returns: true if both structs contain the same data up to EPSILON
  * */
 bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2);
-
 
 #endif /* __BW_HELPER_UTILITIES_H */

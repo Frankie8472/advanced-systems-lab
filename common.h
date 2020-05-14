@@ -21,10 +21,14 @@
 #include <string>
 #include <cstring>
 #include <vector>
-#include <stdlib.h>
+#include <cstdlib>
+#include <cassert>
 
 #define EPSILON 1e-6
 
+/**
+ * Struct containing all data for the Baum-Welch algorithm
+ */
 struct BWdata {
     // (for each observation/training sequence 0 <= k < K)
     size_t* observations; //        [K][T]          [k][t]            :=  observation sequence k at time_step t
@@ -55,7 +59,7 @@ struct BWdata {
     const bool full_copy;
     
     /**
-     * Creates a BWdata
+     * Creates a BWdata from given data (Constructor)
      */
     BWdata(const size_t K,
            const size_t N,
@@ -76,22 +80,23 @@ struct BWdata {
         gamma_sum = (double *)aligned_alloc(32, K*N * sizeof(double));
         sigma_sum = (double *)aligned_alloc(32, K*N*N * sizeof(double));
 
-        if (observations == NULL) exit(2);
-        if (init_prob == NULL) exit(2);
-        if (trans_prob == NULL) exit(2);
-        if (emit_prob == NULL) exit(2);
-        if (neg_log_likelihoods == NULL) exit(2);
-        if (c_norm == NULL) exit(2);
-        if (alpha == NULL) exit(2);
-        if (beta == NULL) exit(2);
-        if (ggamma == NULL) exit(2);
-        if (sigma == NULL) exit(2);
-        if (gamma_sum == NULL) exit(2);
-        if (sigma_sum == NULL) exit(2);
+        assert(observations != NULL && "Failed to allocate observations");
+        assert(init_prob != NULL && "Failed to allocate init_prob");
+        assert(trans_prob != NULL && "Failed to allocate trans_prob");
+        assert(emit_prob != NULL && "Failed to allocate emit_prob");
+        assert(neg_log_likelihoods != NULL && "Failed to allocate neg_log_likelihoods");
+        assert(c_norm != NULL && "Failed to allocate c_norm");
+        assert(alpha != NULL && "Failed to allocate alpha");
+        assert(beta != NULL && "Failed to allocate beta");
+        assert(ggamma != NULL && "Failed to allocate ggamma");
+        assert(sigma != NULL && "Failed to allocate sigma");
+        assert(gamma_sum != NULL && "Failed to allocate gamma_sum");
+        assert(sigma_sum != NULL && "Failed to allocate sigma_sum");
     }
     
     /**
-     * Creates a copy of a BWdata.
+     * Creates a BWdata from a given BWdata (constructor).
+     * This is no deep copy. As no parallelization is used, the reuse of constant memory data is permitted
      */
     BWdata(const BWdata& other): K(other.K), N(other.N), M(other.M), T(other.T), max_iterations(other.max_iterations), full_copy(false){
         init_prob = (double *)aligned_alloc(32, N *sizeof(double));
@@ -107,15 +112,18 @@ struct BWdata {
         gamma_sum = other.gamma_sum;
         sigma_sum = other.sigma_sum;
 
-        if (init_prob == NULL) exit(2);
-        if (trans_prob == NULL) exit(2);
-        if (emit_prob == NULL) exit(2);
+        assert(init_prob != NULL && "Failed to allocate init_prob");
+        assert(trans_prob != NULL && "Failed to allocate trans_prob");
+        assert(emit_prob != NULL && "Failed to allocate emit_prob");
 
         memcpy(init_prob, other.init_prob, N * sizeof(double));
         memcpy(trans_prob, other.trans_prob, N * N * sizeof(double));
         memcpy(emit_prob, other.emit_prob, N * M * sizeof(double));
     }
-    
+
+    /**
+     * Copies the current BWdata into a new one (deep copy).
+     */
     const BWdata& deep_copy() const{
         BWdata* other = new BWdata(K, N, M, T, max_iterations);
         memcpy(other->init_prob, init_prob, N * sizeof(double));
@@ -133,7 +141,11 @@ struct BWdata {
         
         return *other;
     }
-    
+
+    /**
+     * Frees all allocated memory space for BWdata upon destruction.
+     * Only in full_copy BWdata all fields are free'd. It can be assumed all non_full_copies are released beforehand.
+     */
     ~BWdata(){
         if(full_copy){
             // WARNING: Possible Use after free when releasing a full_copy before all non-full_copies are released
@@ -168,12 +180,12 @@ class FuncRegister
 public:
 
     /**
-     * Set the function that is considererd the baseline and other 
+     * Set the function that is considered the baseline and other
      * implementations are compared against. There can only be one baseline
      */
-    static void set_baseline(compute_bw_func f, std::string name);
+    static void set_baseline(compute_bw_func f, const std::string& name);
 
-    static void add_function(compute_bw_func f, std::string name, std::string description);
+    static void add_function(compute_bw_func f, const std::string& name, const std::string& description);
     
     static void printRegisteredFuncs();
 
