@@ -133,10 +133,12 @@ void perf_test(compute_bw_func func, const BWdata& bw){
     perf =  round((100.0 * max_iterations*flops) / cycles) / 100.0;
 
     printf("Total iterations: %ld\n", max_iterations);
-    printf("Iterations to converge: %ld\n", iter);
     if (iter == 0){
         printf("\x1b[1;36mWarning:\x1b[0m has not converged within the maximum iterations\n");
 
+    }
+    else{
+        printf("Iterations to converge: %ld\n", iter);
     }
     printf("Cycles: %f\n", round(cycles));
     printf("Performance: %f\n", perf);
