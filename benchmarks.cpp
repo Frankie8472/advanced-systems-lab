@@ -37,16 +37,19 @@
 /*
 Cost analysis (add, mul and div is one flop)
 
-forward: (1 add + 1 mul)*K*N²*T + (1 add + 2 mults)*K*N*T + (1 add + 2 mults)*K*N + (1 div)*K*T + (1 div)*K
-backward: (1 add + 2 muls)*K*N²*(T-1) + (1 mult)*K*N*(T-1)
-compute gamma: (1 div + 1 mult)*K*N*T + (1 add)*K*N*(T-1)
-compute sigma: (1 add + 3 mults)*K*N²*(T-1)
+forward: (1 add + 1 mul)*K*N²*T + (1 add + 2 mul)*K*N*T + (1 add + 2 mul)*K*N + (1 div)*K*T + (1 div)*K
+backward: (1 add + 2 mul)*K*N²*(T-1) + (1 mul)*K*N*(T-1)
+compute gamma: (1 div + 1 mul)*K*N*T + (1 add)*K*N*(T-1)
+compute sigma: (1 add + 3 mul)*K*N²*(T-1)
 update init: (1 add)*K*N + (1 div)*N
 update trans: (2 adds)*K*N² + (1 div)*N²
 update emit: (2 adds)*N*M*K + (1 add)*K*N*T + (1 add)*K*N + (1 div)*N*M
+neg_log_likelihood_sum: (1 add)*K*T
 
-total: (1 add + 1 mul)*K*N²*T + (2 add + 5 muls)*K*N²*(T-1) + (2 adds)*K*N² + (1 div)*N² + (2 add + 3 mults + div)*K*N*T + (1 add + 1 muls)*K*N*(T-1)
-    + (3 add + 2 mults)*K*N + (1 div)*K + (2 adds)*N*M*K + (1 div)*K*T + (1 div)*N + (1 div)*N*M
+total: (1 add + 1 mul)*K*N²*T + (2 add + 5 mul)*K*N²*(T-1) + (2 adds)*K*N² + (1 div)*N² + (2 add + 3 mul + div)*K*N*T + (1 add + 1 mul)*K*N*(T-1)
+    + (3 add + 2 mul)*K*N + (1 div)*K + (2 adds)*N*M*K + (1 div + 1 add)*K*T + (1 div)*N + (1 div)*N*M
+
+    ≈ 9*T*K*N² - 5*K*N² + N² + 8*T*K*N + 3*K*N + K + 2*K*N*M + 2*T*K + N + N*M
 */
 
 int flops;
@@ -89,7 +92,6 @@ void perf_test(compute_bw_func func, const BWdata& bw){
 
 #endif
     // Actual performance measurements repeated REP times.
-
     double total_cycles = 0;
     size_t iter;
     size_t total_iter = 0;
@@ -207,7 +209,7 @@ int main(int argc, char **argv) {
 
     printf("Benchmarking with K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
 
-    flops = 2*K*N*N*T + 7*K*N*N*(T-1) + 2*K*N*N + N*N + 6*K*N*T + 2*K*N*(T-1) + 5*K*N + K + 2*N*M*K + K*T + N + N*M;
+    flops = 9*T*K*N*N - 5*K*N*N + N*N + 8*T*K*N + 3*K*N + K + 2*K*N*M + 2*T*K + N + N*M;
 
     const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
     initialize_random(bw);
