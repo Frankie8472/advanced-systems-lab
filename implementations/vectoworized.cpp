@@ -22,10 +22,10 @@
 
 #include <cmath>
 #include <cstring>
-#include <immintrin.h>
+//#include <immintrin.h>
 
 #include "../common.h"
-#include "../helper_utilities.h"
+//#include "../helper_utilities.h"
 
 void forward_step(const BWdata& bw);
 void backward_step(const BWdata& bw);

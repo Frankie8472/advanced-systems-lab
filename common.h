@@ -23,6 +23,7 @@
 #include <vector>
 #include <cstdlib>
 #include <cassert>
+#include <immintrin.h>
 
 #define EPSILON 1e-6
 
