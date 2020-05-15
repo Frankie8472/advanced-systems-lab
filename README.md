@@ -23,7 +23,7 @@ The project uses CMake.
 
 Create a folder named `build` and change into it. Then run `cmake ..` to generate the Makefile and then `make` to build the project. 
 
-The project generates two executables: `benchmarks` nad `verifications`. 
+The project generates two executables: `benchmarks` and `verifications`. 
 
 ## Running the project
 
