@@ -21,7 +21,7 @@
 #include "../common.h"
 
 
-static void forward_step_jc(const BWdata& bw);
+static void forward_step_jc(const BWdata& bw, const int& i, const size_t& iter, size_t& res, bool& first, double& neg_log_likelihood_sum_old);
 static void backward_step_jc(const BWdata& bw);
 static void compute_gamma_jc(const BWdata& bw);
 static void compute_sigma_jc(const BWdata& bw);
@@ -46,7 +46,7 @@ size_t comp_bw_scalar_jc1(const BWdata& bw){
 
         iter++;
 
-        forward_step_jc(bw);
+        forward_step_jc(bw, i, iter, res, first, neg_log_likelihood_sum_old);
         backward_step_jc(bw);
         compute_gamma_jc(bw);
         //compute_sigma_jc(bw);
@@ -54,12 +54,14 @@ size_t comp_bw_scalar_jc1(const BWdata& bw){
         update_trans_prob_jc(bw);
         update_emit_prob_jc(bw);
 
+        /*
         double neg_log_likelihood_sum = 0.0;
         for (size_t k = 0; k < bw.K; k++) {
             for (size_t t = 0; t < bw.T; t++) {
                 neg_log_likelihood_sum = neg_log_likelihood_sum + log(bw.c_norm[k*bw.T + t]);
             }
         }
+
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         if (first && i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
@@ -68,14 +70,15 @@ size_t comp_bw_scalar_jc1(const BWdata& bw){
         }
 
         neg_log_likelihood_sum_old = neg_log_likelihood_sum;
-
+        */
     }
 
     return res;
 }
 
 
-inline void forward_step_jc(const BWdata& bw) {
+inline void forward_step_jc(const BWdata& bw, const int& i, const size_t& iter, size_t& res, bool& first, double& neg_log_likelihood_sum_old) {
+    double neg_log_likelihood_sum = 0.0;
     for (size_t k = 0; k < bw.K; k++) {
         // t = 0, base case
         double c_norm = 0;
@@ -92,6 +95,7 @@ inline void forward_step_jc(const BWdata& bw) {
             bw.alpha[(k*bw.T + 0)*bw.N + n] *= c_norm;
         }
         bw.c_norm[k*bw.T + 0] = c_norm;
+        neg_log_likelihood_sum += log(c_norm);
 
         // recursion step
         for (size_t t = 1; t < bw.T; t++) {
@@ -110,8 +114,20 @@ inline void forward_step_jc(const BWdata& bw) {
                 bw.alpha[(k*bw.T + t)*bw.N + n0] *= c_norm;
             }
             bw.c_norm[k*bw.T + t] = c_norm;
+
+            neg_log_likelihood_sum += log(c_norm);
         }
     }
+
+    // Neg log likelihood sum check
+    bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
+
+    if (first && i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
+        first = false;
+        res = iter;
+    }
+
+    neg_log_likelihood_sum_old = neg_log_likelihood_sum;
 }
 
 
@@ -136,8 +152,6 @@ inline void backward_step_jc(const BWdata& bw) {
                 bw.beta[(k*bw.T + t)*bw.N + n0] = beta_temp * bw.c_norm[k*bw.T + t];
                 double gamma = bw.alpha[(k*bw.T + t)*bw.N + n0] * beta_temp;
                 bw.ggamma[(k*bw.T + t)*bw.N + n0] = gamma;
-                
-                
             }
         }
     }
