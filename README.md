@@ -42,7 +42,7 @@ Options:
   				 Can occur multiple times and is compatible with --test. The baseline is
   				 always run.
       --list			Lists all available implementations and exits
-      --max-iteration <value>	Sets the max-iteration to a value
+      --max-iterations <value>	Sets the max-iteration to a value
 ```
 
 `verification` checks if the implementations behave correctly and compares the implementations against the baseline that is verified differently.

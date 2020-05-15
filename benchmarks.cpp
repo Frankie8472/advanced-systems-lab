@@ -147,7 +147,7 @@ static struct option arg_options[] = {
         {"test", no_argument, NULL, 't'}, 
         {"only", required_argument, NULL, 'o'},
         {"list", no_argument, NULL, 'l'},
-        {"max-iteration", required_argument, NULL, 1},
+        {"max-iterations", required_argument, NULL, 1},
         {"help", no_argument, NULL, 'h'},
         {0, 0, 0, 0}
     };
@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
                                  "\n  \t\t\t\t Can occur multiple times and is compatible with --test. The baseline is"
                                  "\n  \t\t\t\t always run.\n");
                 printf("      --list\t\t\tLists all available implementations and exits\n");
-                printf("      --max-iteration <value>\tSets the max-iteration to a value\n");
+                printf("      --max-iterations <value>\tSets the max-iteration to a value\n");
                 exit(0);
             case '?':
                 exit(-1);

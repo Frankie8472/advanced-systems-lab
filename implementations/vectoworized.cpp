@@ -60,13 +60,13 @@ __m256d _mm256_sumFourRowsIntoOneCol_pd(const __m256d row_0, const __m256d row_1
 #define STRIDE_LAYER_K 4
 
 // local globals (heh)
-double* ggamma_N_K_T;
-double* helper_4_doubles;
-double* emit_prob_transpose;
-double* trans_prob_transpose;
-double* observations_double_array;
-const __m256d ones = _mm256_set1_pd(1.0);
-const __m256d zeros = _mm256_setzero_pd();
+static double* ggamma_N_K_T;
+static double* helper_4_doubles;
+static double* emit_prob_transpose;
+static double* trans_prob_transpose;
+static double* observations_double_array;
+static const __m256d ones = _mm256_set1_pd(1.0);
+static const __m256d zeros = _mm256_setzero_pd();
 
 /* END DECLARE HELPER STUFF */
 
@@ -96,7 +96,7 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
 
     size_t itera = 0;
     size_t res = 0;
-    double neg_log_likelihood_sum_old; // Does not have to be initialized as it will be if and only if i > 0
+    double neg_log_likelihood_sum_old = 0; // Does not have to be initialized as it will be if and only if i > 0
     bool first = true;
 
     // run for all iterations
