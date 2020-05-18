@@ -225,9 +225,18 @@ int main(int argc, char **argv) {
     perf_test(FuncRegister::baseline_func, bw);
     printf("\n");
     for(size_t i = 0; i < FuncRegister::size(); i++){
-        if(sel_impl.empty() || sel_impl.find(FuncRegister::func_names->at(i)) != sel_impl.end()){
-            printf("Running: %s: %s\n", FuncRegister::func_names->at(i).c_str(), FuncRegister::func_descs->at(i).c_str());
-            perf_test(FuncRegister::user_funcs->at(i), bw);
+        if(sel_impl.empty() || sel_impl.find(FuncRegister::funcs->at(i).name) != sel_impl.end()){
+
+            // Hacky but it works: Transpose emit_prob
+            if(FuncRegister::funcs->at(i).transpose_emit_prob){
+                double *new_emit_prob = (double *)malloc(bw.N*bw.M * sizeof(double));
+                transpose_matrix(new_emit_prob, bw.emit_prob, bw.N, bw.M);
+                memcpy(bw.emit_prob, new_emit_prob, bw.N*bw.M * sizeof(double));
+                free(new_emit_prob);
+            }
+
+            printf("Running: %s: %s\n", FuncRegister::funcs->at(i).name.c_str(), FuncRegister::funcs->at(i).name.c_str());
+            perf_test(FuncRegister::funcs->at(i).func, bw);
             printf("\n");
         }
     }

@@ -142,10 +142,28 @@ inline void check_user_functions(const size_t& nb_random_tests) {
 
         // run all user functions and compare against the data
         for(size_t f = 0; f < nb_user_functions; f++) {
-            printf("Running User Function \x1b[1m'%s'\x1b[0m\n", FuncRegister::func_names->at(f).c_str());
+            printf("Running User Function \x1b[1m'%s'\x1b[0m\n", FuncRegister::funcs->at(f).name.c_str());
             printf("-------------------------------------------------------------------------------\n");
             const BWdata& bw_user_function = bw_baseline_initialized.deep_copy();
-            const size_t user_function_convergence = FuncRegister::user_funcs->at(f)(bw_user_function);
+
+            // Hacky but it works: Transpose emit_prob
+            if(FuncRegister::funcs->at(f).transpose_emit_prob){
+                double *new_emit_prob = (double *)malloc(bw_user_function.N*bw_user_function.M * sizeof(double));
+                transpose_matrix(new_emit_prob, bw_user_function.emit_prob, bw_user_function.N, bw_user_function.M);
+                memcpy(bw_user_function.emit_prob, new_emit_prob, bw_user_function.N*bw_user_function.M * sizeof(double));
+                free(new_emit_prob);
+            }
+
+            const size_t user_function_convergence = FuncRegister::funcs->at(f).func(bw_user_function);
+
+            // Transpose back to do verification
+            if(FuncRegister::funcs->at(f).transpose_emit_prob){
+                double *new_emit_prob = (double *)malloc(bw_user_function.N*bw_user_function.M * sizeof(double));
+                transpose_matrix(new_emit_prob, bw_user_function.emit_prob, bw_user_function.M, bw_user_function.N);
+                memcpy(bw_user_function.emit_prob, new_emit_prob, bw_user_function.N*bw_user_function.M * sizeof(double));
+                free(new_emit_prob);
+            }
+
             printf("It took \x1b[1m[%zu] iterations\x1b[0m to converge\n", user_function_convergence);
             printf("-------------------------------------------------------------------------------\n");
             const bool user_function_success = check_and_verify(bw_user_function);
@@ -191,9 +209,9 @@ inline void check_user_functions(const size_t& nb_random_tests) {
 
         printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
         if(nb_fails == 0){
-            printf("\x1b[1;32mALL CASES PASSED:\x1b[0m '%s': %s\n", FuncRegister::func_names->at(f).c_str(), FuncRegister::func_descs->at(f).c_str());
+            printf("\x1b[1;32mALL CASES PASSED:\x1b[0m '%s': %s\n", FuncRegister::funcs->at(f).name.c_str(), FuncRegister::funcs->at(f).description.c_str());
         } else {
-            printf("\x1b[1;31m[%zu/%zu] CASES FAILED:\x1b[0m '%s': %s \n", nb_fails, nb_random_tests, FuncRegister::func_names->at(f).c_str(), FuncRegister::func_descs->at(f).c_str());
+            printf("\x1b[1;31m[%zu/%zu] CASES FAILED:\x1b[0m '%s': %s \n", nb_fails, nb_random_tests, FuncRegister::funcs->at(f).name.c_str(), FuncRegister::funcs->at(f).description.c_str());
         }
         printf("\x1b[1m-------------------------------------------------------------------------------\x1b[0m\n");
         for (size_t i = 0; i < nb_random_tests; i++) {

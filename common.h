@@ -36,6 +36,7 @@ struct BWdata {
     double* init_prob; //           [N]             [n]               :=  P(X_1 = n)
     double* trans_prob; //          [N][N]          [n0][n1]          :=  P(X_t = n1 | X_(t-1) = n0)
     double* emit_prob; //           [N][M]          [n][m]            :=  P(Y_t = y_m | X_t = n)
+                       // Some optimizations require this matrix to be [M][N]
     double* neg_log_likelihoods; // [max_iterations] [it]             :=  array to store the neg_log_likelihood for each iteration
     double* c_norm; //              [K][T]          [k][t]            :=  scaling/normalization factor for numerical stability
     // NOTE that
@@ -173,6 +174,13 @@ struct BWdata {
  */
 typedef size_t(*compute_bw_func)(const BWdata& bw);
 
+struct RegisteredFunction{
+    compute_bw_func func;
+    std::string name;
+    std::string description;
+    bool transpose_emit_prob;
+};
+
 /**
  * Static class that handles the function registration. 
  */
@@ -186,18 +194,16 @@ public:
      */
     static void set_baseline(compute_bw_func f, const std::string& name);
 
-    static void add_function(compute_bw_func f, const std::string& name, const std::string& description);
+    static void add_function(compute_bw_func f, const std::string& name, const std::string& description, const bool transpose_emit_prob = false);
     
     static void printRegisteredFuncs();
 
     static size_t size()
     {
-        return (*user_funcs).size();   
+        return (*funcs).size();
     }
     
-    static std::vector<compute_bw_func> *user_funcs;
-    static std::vector<std::string> *func_names;
-    static std::vector<std::string> *func_descs;
+    static std::vector<struct RegisteredFunction> *funcs;
     static compute_bw_func baseline_func;
     static std::string baseline_name;
 };
@@ -209,6 +215,16 @@ public:
         f##_()                                                    \
         {                                                         \
             FuncRegister::add_function(f, name, description);     \
+        }                                                         \
+    } f##__BW_;
+
+//Macro to register a function that requires emit_prob to be column major
+#define REGISTER_FUNCTION_TRANSPOSE_EMIT_PROB(f, name, description)                   \
+    static struct f##_                                            \
+    {                                                             \
+        f##_()                                                    \
+        {                                                         \
+            FuncRegister::add_function(f, name, description, true);     \
         }                                                         \
     } f##__BW_;
 

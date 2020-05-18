@@ -11,6 +11,7 @@ add_executable(verification
     helper_utilities.cpp
     verifications.cpp
     implementations/baseline.cpp
+#    implementations/baseline_transposed_emit_prob.cpp # Test transpose of emit_prob
     implementations/reordered_algorithm.cpp
     implementations/scalar_optimized_playground.cpp
     implementations/scalar_optimized_reorder.cpp
@@ -27,6 +28,7 @@ add_executable(benchmarks
     helper_utilities.cpp
     benchmarks.cpp
     implementations/baseline.cpp
+#    implementations/baseline_transposed_emit_prob.cpp # Test transpose of emit_prob
     implementations/reordered_algorithm.cpp
     implementations/scalar_optimized_playground.cpp
     implementations/scalar_optimized_reorder.cpp

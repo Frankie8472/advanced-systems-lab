@@ -331,6 +331,15 @@ void print_BWdata(const BWdata& bw) {
 
 }
 
+void transpose_matrix(double* output, const double* input, const size_t N, const size_t M) {
+    for (size_t n = 0; n < N; n++) {
+        for (size_t m = 0; m < M; m++) {
+            // this can't be really vectorized (maybe combined with 4x4 blocking)
+            output[m*N + n] = input[n*M + m];
+        }
+    }
+}
+
 /**
  * Helper function that compares the probabilities of the BWdata struct. 
  *

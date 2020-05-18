@@ -75,6 +75,11 @@ inline void print_BWdata_debug_helper(const BWdata& bw, const size_t iteration_v
 }
 
 /**
+ * Transposes a matrix from input to matrix output.
+ */
+void transpose_matrix(double* output, const double* input, const size_t N, const size_t M);
+
+/**
  * Compares only the following fields of the two given BWdata structs (considering EPSILON)
  * - Initialization Probabilities
  * - Transition Probabilities
