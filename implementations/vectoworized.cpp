@@ -131,7 +131,7 @@ size_t comp_bw_vectOwOrized(const BWdata& bw){
         }
         bw.neg_log_likelihoods[iter] = neg_log_likelihood_sum;
 
-        if (first && iter > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
+        if (first && iter > 0 && fabs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
             first = false;
             res = itera;
         }

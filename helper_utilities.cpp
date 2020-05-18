@@ -135,7 +135,7 @@ bool check_and_verify(const BWdata& bw) {
     init_sum = 0.0;
     printf("\n");
     for (size_t n = 0; n < N; n++) init_sum += bw.init_prob[n];
-    if ( abs(init_sum - 1.0) < EPSILON ) PRINT_PASSED("init_prob sums to 1.0");
+    if ( fabs(init_sum - 1.0) < EPSILON ) PRINT_PASSED("init_prob sums to 1.0");
     else PRINT_VIOLATION("init_prob sums to %lf", 1L, init_sum);
 
     // check if the rows of the transition distribution sums to 1.0
@@ -145,7 +145,7 @@ bool check_and_verify(const BWdata& bw) {
         for (size_t n1 = 0; n1 < N; n1++) {
             trans_sum += bw.trans_prob[n0*N + n1];
         }
-        if (abs(trans_sum - 1.0) >= EPSILON) {
+        if (!(fabs(trans_sum - 1.0) < EPSILON)) {
             errors++;
             PRINT_FAIL("trans_prob[%zu] sums to %lf", n0, trans_sum);
         }
@@ -164,7 +164,7 @@ bool check_and_verify(const BWdata& bw) {
         for (size_t m = 0; m < M; m++) {
             emit_sum += bw.emit_prob[n*M + m];
         }
-        if (abs(emit_sum - 1.0) >= EPSILON) {
+        if (!(fabs(emit_sum - 1.0) < EPSILON)) {
             errors++;
             PRINT_FAIL("emit_prob[%zu] sums to %lf", n, emit_sum);
         }
@@ -348,44 +348,17 @@ void transpose_matrix(double* output, const double* input, const size_t N, const
  * - (-1) if the constants (K, N, M, T, max_iterations) do not match (as comparing does not make any sense then)
  * - 'the number of errors that were found while comparing' in any other case
  */
-int get_BWdata_probabilities_differences(const BWdata& bw1, const BWdata& bw2) {
-    if (bw1.K != bw2.K) {
-        PRINT_BWDATA_MISSMATCH("K1 = %zu is not %zu = K2\n", bw1.K, bw2.K);
-        return -1;
-    }
-
-    if (bw1.N != bw2.N) {
-        PRINT_BWDATA_MISSMATCH(" N1 = %zu is not %zu = N2\n", bw1.N, bw2.N);
-        return -1;
-    }
-
-    if (bw1.M != bw2.M) {
-        PRINT_BWDATA_MISSMATCH("M1 = %zu is not %zu = M2\n", bw1.M, bw2.M);
-        return -1;
-    }
-
-    if (bw1.T != bw2.T) {
-        PRINT_BWDATA_MISSMATCH("T1 = %zu is not %zu = T2\n", bw1.T, bw2.T);
-        return -1;
-    }
-
-    if (bw1.max_iterations != bw2.max_iterations) {
-        PRINT_BWDATA_MISSMATCH("maxIterations1 = %zu is not %zu = maxIterations2\n",
-            bw1.max_iterations, bw2.max_iterations
-        );
-        return -1;
-    }
-
+size_t get_BWdata_probabilities_differences(const BWdata& bw1, const BWdata& bw2) {
     const size_t N = bw1.N;
     const size_t M = bw1.M;
 
     size_t errors_local = 0;
-    int errors_total = 0;
+    size_t errors_total = 0;
 
     for(size_t n = 0; n < N; n++) {
         const size_t index = n;
-        const double err_abs_diff = abs(bw1.init_prob[index] - bw2.init_prob[index]);
-        if (err_abs_diff >= EPSILON) {
+        const double err_abs_diff = fabs(bw1.init_prob[index] - bw2.init_prob[index]);
+        if (!(err_abs_diff < EPSILON)) {
             errors_local++;
         }
     }
@@ -400,8 +373,8 @@ int get_BWdata_probabilities_differences(const BWdata& bw1, const BWdata& bw2) {
     for(size_t n0 = 0; n0 < N; n0++) {
         for(size_t n1 = 0; n1 < N; n1++) {
             const size_t index = n0*N + n1;
-            const double err_abs_diff = abs(bw1.trans_prob[index] - bw2.trans_prob[index]);
-            if (err_abs_diff >= EPSILON) {
+            const double err_abs_diff = fabs(bw1.trans_prob[index] - bw2.trans_prob[index]);
+            if (!(err_abs_diff < EPSILON)) {
                 errors_local++;
             }
         }
@@ -418,8 +391,8 @@ int get_BWdata_probabilities_differences(const BWdata& bw1, const BWdata& bw2) {
     for(size_t n = 0; n < N; n++) {
         for(size_t m = 0; m < M; m++) {
             const size_t index = n*M + m;
-            const double err_abs_diff = abs(bw1.emit_prob[index] - bw2.emit_prob[index]);
-            if (err_abs_diff >= EPSILON) {
+            const double err_abs_diff = fabs(bw1.emit_prob[index] - bw2.emit_prob[index]);
+            if (!(err_abs_diff < EPSILON)) {
                 errors_local++;
             }
         }
@@ -435,11 +408,35 @@ int get_BWdata_probabilities_differences(const BWdata& bw1, const BWdata& bw2) {
 }
 
 bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& bw2) {
-    int errors_total = get_BWdata_probabilities_differences(bw1, bw2);
-    if(errors_total < 0){
-        PRINT_BWDATA_MISSMATCH("Cannot compare! The constants do not match.");
-    } else if (errors_total > 0) {
-        PRINT_BWDATA_MISSMATCH("[%d] errors in total!\n", errors_total);
+    if (bw1.K != bw2.K) {
+        PRINT_BWDATA_MISSMATCH("K1 = %zu is not %zu = K2\n", bw1.K, bw2.K);
+        return false;
+    }
+
+    if (bw1.N != bw2.N) {
+        PRINT_BWDATA_MISSMATCH(" N1 = %zu is not %zu = N2\n", bw1.N, bw2.N);
+        return false;
+    }
+
+    if (bw1.M != bw2.M) {
+        PRINT_BWDATA_MISSMATCH("M1 = %zu is not %zu = M2\n", bw1.M, bw2.M);
+        return false;
+    }
+
+    if (bw1.T != bw2.T) {
+        PRINT_BWDATA_MISSMATCH("T1 = %zu is not %zu = T2\n", bw1.T, bw2.T);
+        return false;
+    }
+
+    if (bw1.max_iterations != bw2.max_iterations) {
+        PRINT_BWDATA_MISSMATCH("maxIterations1 = %zu is not %zu = maxIterations2\n",
+            bw1.max_iterations, bw2.max_iterations
+        );
+        return false;
+    }
+    size_t errors_total = get_BWdata_probabilities_differences(bw1, bw2);
+    if (errors_total > 0) {
+        PRINT_BWDATA_MISSMATCH("[%zu] errors in total!\n", errors_total);
     } else {
         printf("\x1b[1;32mBWdata IS equal:\x1b[0m All Probabilities Match!\n");
     }
@@ -448,24 +445,44 @@ bool is_BWdata_equal_only_probabilities(const BWdata& bw1, const BWdata& bw2) {
 }
 
 bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
-    int errors_total = get_BWdata_probabilities_differences(bw1, bw2);
+    if (bw1.K != bw2.K) {
+        PRINT_BWDATA_MISSMATCH("K1 = %zu is not %zu = K2\n", bw1.K, bw2.K);
+        return false;
+    }
+
+    if (bw1.N != bw2.N) {
+        PRINT_BWDATA_MISSMATCH(" N1 = %zu is not %zu = N2\n", bw1.N, bw2.N);
+        return false;
+    }
+
+    if (bw1.M != bw2.M) {
+        PRINT_BWDATA_MISSMATCH("M1 = %zu is not %zu = M2\n", bw1.M, bw2.M);
+        return false;
+    }
+
+    if (bw1.T != bw2.T) {
+        PRINT_BWDATA_MISSMATCH("T1 = %zu is not %zu = T2\n", bw1.T, bw2.T);
+        return false;
+    }
+
+    if (bw1.max_iterations != bw2.max_iterations) {
+        PRINT_BWDATA_MISSMATCH("maxIterations1 = %zu is not %zu = maxIterations2\n",
+            bw1.max_iterations, bw2.max_iterations
+        );
+        return false;
+    }
+    size_t errors_total = get_BWdata_probabilities_differences(bw1, bw2);
     size_t errors_local = 0;
 
     const size_t K = bw1.K;
     const size_t N = bw1.N;
-    const size_t M = bw1.M;
     const size_t T = bw1.T;
     const size_t max_iterations = bw1.max_iterations;
 
-    if(errors_total < 0){
-        PRINT_BWDATA_MISSMATCH("Cannot compare! The constants do not match.");
-        return false;
-    }
-
     for (size_t it = 0; it < max_iterations; it++) {
         const size_t index = it;
-        const double err_abs_diff = abs(bw1.neg_log_likelihoods[index] - bw2.neg_log_likelihoods[index]);
-        if (err_abs_diff >= EPSILON) {
+        const double err_abs_diff = fabs(bw1.neg_log_likelihoods[index] - bw2.neg_log_likelihoods[index]);
+        if (!(err_abs_diff < EPSILON)) {
             errors_local++;
         }
     }
@@ -478,8 +495,8 @@ bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
     for (size_t k = 0; k < K; k++) {
         for (size_t t = 0; t < T; t++) {
             const size_t index = k*T + t;
-            const double err_abs_diff = abs(bw1.c_norm[index] - bw2.c_norm[index]);
-            if (err_abs_diff >= EPSILON) {
+            const double err_abs_diff = fabs(bw1.c_norm[index] - bw2.c_norm[index]);
+            if (!(err_abs_diff < EPSILON)) {
                 errors_local++;
             }
         }
@@ -494,8 +511,8 @@ bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
         for (size_t t = 0; t < T; t++) {
             for (size_t n = 0; n < N; n++) {
                 const size_t index = (k*T + t)*N + n;
-                const double err_abs_diff = abs(bw1.alpha[index] - bw2.alpha[index]);
-                if (err_abs_diff >= EPSILON) {
+                const double err_abs_diff = fabs(bw1.alpha[index] - bw2.alpha[index]);
+                if (!(err_abs_diff < EPSILON)) {
                     errors_local++;
                 }
             }
@@ -511,8 +528,8 @@ bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
         for (size_t t = 0; t < T; t++) {
             for (size_t n = 0; n < N; n++) {
                 const size_t index = (k*T + t)*N + n;
-                const double err_abs_diff = abs(bw1.beta[index] - bw2.beta[index]);
-                if (err_abs_diff >= EPSILON) {
+                const double err_abs_diff = fabs(bw1.beta[index] - bw2.beta[index]);
+                if (!(err_abs_diff < EPSILON)) {
                     errors_local++;
                 }
             }
@@ -528,8 +545,8 @@ bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
         for (size_t t = 0; t < T; t++) {
             for (size_t n = 0; n < N; n++) {
                 const size_t index = (k*T + t)*N + n;
-                const double err_abs_diff = abs(bw1.ggamma[index] - bw2.ggamma[index]);
-                if (err_abs_diff >= EPSILON) {
+                const double err_abs_diff = fabs(bw1.ggamma[index] - bw2.ggamma[index]);
+                if (!(err_abs_diff < EPSILON)) {
                     errors_local++;
                 }
             }
@@ -544,8 +561,8 @@ bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
     for (size_t k = 0; k < K; k++) {
         for (size_t n = 0; n < N; n++) {
             const size_t index = k*N + n;
-            const double err_abs_diff = abs(bw1.gamma_sum[index] - bw2.gamma_sum[index]);
-            if (err_abs_diff >= EPSILON) {
+            const double err_abs_diff = fabs(bw1.gamma_sum[index] - bw2.gamma_sum[index]);
+            if (!(err_abs_diff < EPSILON)) {
                 errors_local++;
             }
         }
@@ -561,8 +578,8 @@ bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
             for (size_t n0 = 0; n0 < N; n0++) {
                 for(size_t n1 = 0; n1 < N; n1++) {
                     const size_t index =((k*T + t)*N + n0)*N + n1;
-                    const double err_abs_diff = abs(bw1.sigma[index] - bw2.sigma[index]);
-                    if (err_abs_diff >= EPSILON) {
+                    const double err_abs_diff = fabs(bw1.sigma[index] - bw2.sigma[index]);
+                    if (!(err_abs_diff < EPSILON)) {
                         errors_local++;
                     }
                 }
@@ -579,8 +596,8 @@ bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
         for (size_t n0 = 0; n0 < N; n0++) {
             for (size_t n1 = 0; n1 < N; n1++) {
                 const size_t index = (k*N + n0)*N + n1;
-                const double err_abs_diff = abs(bw1.sigma_sum[index] - bw2.sigma_sum[index]);
-                if (err_abs_diff >= EPSILON) {
+                const double err_abs_diff = fabs(bw1.sigma_sum[index] - bw2.sigma_sum[index]);
+                if (!(err_abs_diff < EPSILON)) {
                     errors_local++;
                 }
             }
@@ -593,7 +610,7 @@ bool is_BWdata_equal(const BWdata& bw1, const BWdata& bw2) {
     errors_local = 0;
 
     if (errors_total > 0) {
-        PRINT_BWDATA_MISSMATCH("[%d] errors in total!\n", errors_total);
+        PRINT_BWDATA_MISSMATCH("[%zu] errors in total!\n", errors_total);
     } else {
         printf("\x1b[1;32mBWdata IS equal:\x1b[0m Everything Matches!\n");
     }

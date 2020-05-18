@@ -61,7 +61,7 @@ size_t comp_bw_scalar_reorder(const BWdata& bw){
         }
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
-        if (first && i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
+        if (first && i > 0 && fabs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < EPSILON){
             first = false;
             res = iter;
         }

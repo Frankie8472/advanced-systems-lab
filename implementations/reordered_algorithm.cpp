@@ -131,7 +131,7 @@ inline void forward_step_jc(const BWdata& bw, const int& i, const size_t& iter, 
     // Neg log likelihood sum check
     bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
-    if (first && i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
+    if (first && i > 0 && fabs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < EPSILON){
         first = false;
         res = iter;
     }
