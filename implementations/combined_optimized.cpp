@@ -42,14 +42,14 @@ size_t comp_bw_combined(const BWdata& bw){
     // run for all iterations
     for (size_t i = 0; i < bw.max_iterations; i++) {
         neg_log_likelihood_sum = 0.0;
-
+        
         forward_step(bw, neg_log_likelihood_sum);
         for (size_t k = 0; k < bw.K; k++) {
             backward_step(bw, k);
             compute_gamma(bw, k);
         }
-
-
+        
+        
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         if (first && i > 0 && abs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
@@ -58,8 +58,8 @@ size_t comp_bw_combined(const BWdata& bw){
         }
 
         neg_log_likelihood_sum_old = neg_log_likelihood_sum;
-
-
+        
+        
         update_trans_prob(bw);
         update_emit_prob(bw);
     }
@@ -69,9 +69,10 @@ size_t comp_bw_combined(const BWdata& bw){
 
 inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
     //Init
-    __m256d init_prob, emit_prob, alpha, c_norm_v, alpha_sum;
+    __m256d init_prob, emit_prob, alpha, c_norm_v, alpha_sum, trans_prob;
     __m128d vlow, vhigh;
-    double c_norm, alpha, alpha_sum, emit_prob, trans_prob;
+    double c_norm;
+    double c_norm0, c_norm1, c_norm2, c_norm3;
 
     size_t kTN, kT;
     // t = 0, base case
@@ -81,110 +82,103 @@ inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
         c_norm_v = _mm256_setzero_pd();
         kTN = k*bw.T*bw.N;
         kT = k*bw.T;
-
+        
         size_t observations = bw.observations[k*bw.T];
-
+    
         for (size_t n = 0; n < bw.N; n+=4){
             // Load
-            init_prob = _mm256_load_pd(bw.init_prob);
+            init_prob = _mm256_load_pd(bw.init_prob + n);
             emit_prob = _mm256_load_pd(bw.emit_prob + observations*bw.N + n);
-
+    
             // Calculate
             alpha = _mm256_mul_pd(init_prob, emit_prob);
-            c_norm_v = _mm256_fmadd_pdd(init_prob, emit_prob, c_norm_v);
-
+            c_norm_v = _mm256_fmadd_pd(init_prob, emit_prob, c_norm_v);
+            //c_norm0 = init_prob * emit_prob + c_norm0;
+            //c_norm1 = init_prob * emit_prob + c_norm1;
+            //c_norm2 = init_prob * emit_prob + c_norm2;
+            //c_norm3 = init_prob * emit_prob + c_norm3;
+    
             // Store
             _mm256_store_pd(bw.alpha + kTN + n, alpha);
         }
-
+    
         // Calculate
         vlow  = _mm256_castpd256_pd128(c_norm_v);
         vhigh = _mm256_extractf128_pd(c_norm_v, 1); // high 128
         vlow  = _mm_add_pd(vlow, vhigh);     // reduce down to 128
-
+//
         __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
         c_norm = _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
         c_norm = 1.0/c_norm;
+        //c_norm = 1.0/(c_norm0 + c_norm1 + c_norm2 + c_norm3)
         c_norm_v = _mm256_set1_pd(c_norm);
-
+    
         for (size_t n = 0; n < bw.N; n+=4){
             // Load
-            alpha = _mm256_load_pd(bw.init_prob);
-
+            alpha = _mm256_load_pd(bw.alpha + kTN + n);
+    
             // Calculate
-            alpha = _mm256_mul_pd(alpha, c_norm_v)
-
+            alpha = _mm256_mul_pd(alpha, c_norm_v);
+    
             // Store
             _mm256_store_pd(bw.alpha + kTN + n, alpha);
         }
-
+    
         // Store
         bw.c_norm[kT] = c_norm;
         neg_log_likelihood_sum += log(c_norm);
-
+        
         // recursion step
         for (size_t t = 1; t < bw.T; t++) {
             c_norm_v = _mm256_setzero_pd();
             observations = bw.observations[kT + t];
             kTN = (kT + t)*bw.N;
-
+    
             for (size_t n0 = 0; n0 < bw.N; n0+=4) {
-
+    
                 // Load
                 alpha_sum = _mm256_setzero_pd();
-                emit_prob = _mm256_load_pd(bw.emit_prob + observations*bw.N + (n0 + 0)];
-                emit_prob1 = bw.emit_prob[observations*bw.N + (n0 + 1)];
-                emit_prob2 = bw.emit_prob[observations*bw.N + (n0 + 2)];
-                emit_prob3 = bw.emit_prob[observations*bw.N + (n0 + 3)];
-
+    
                 for (size_t n1 = 0; n1 < bw.N; n1++) {
-
+    
                     // Load
-                    alpha = bw.alpha[kTN - bw.N + n1];
-                    trans_prob0 = bw.trans_prob[n1*bw.N + n0 + 0];
-                    trans_prob1 = bw.trans_prob[n1*bw.N + n0 + 1];
-                    trans_prob2 = bw.trans_prob[n1*bw.N + n0 + 2];
-                    trans_prob3 = bw.trans_prob[n1*bw.N + n0 + 3];
-
+                    alpha = _mm256_broadcast_sd(bw.alpha + kTN - bw.N + n1);
+                    trans_prob = _mm256_load_pd(bw.trans_prob + n1*bw.N + n0);
+    
                     // Calculate
-                    alpha_sum0 += alpha * trans_prob0;
-                    alpha_sum1 += alpha * trans_prob1;
-                    alpha_sum2 += alpha * trans_prob2;
-                    alpha_sum3 += alpha * trans_prob3;
+                    alpha_sum = _mm256_fmadd_pd(alpha, trans_prob, alpha_sum);
                 }
-
+    
+                emit_prob = _mm256_load_pd(bw.emit_prob + observations*bw.N + n0);
                 // Calculate
-                alpha0 = emit_prob0 * alpha_sum0;
-                alpha1 = emit_prob1 * alpha_sum1;
-                alpha2 = emit_prob2 * alpha_sum2;
-                alpha3 = emit_prob3 * alpha_sum3;
-                c_norm0 += alpha0;
-                c_norm1 += alpha1;
-                c_norm2 += alpha2;
-                c_norm3 += alpha3;
-
+                alpha = _mm256_mul_pd(alpha_sum, emit_prob);
+                c_norm_v = _mm256_fmadd_pd(alpha_sum, emit_prob, c_norm_v);
+    
                 // Store
-                bw.alpha[kTN + n0 + 0] = alpha0;
-                bw.alpha[kTN + n0 + 1] = alpha1;
-                bw.alpha[kTN + n0 + 2] = alpha2;
-                bw.alpha[kTN + n0 + 3] = alpha3;
+                _mm256_store_pd(bw.alpha + kTN + n0, alpha);
             }
-
+    
             // Calculate
-            c_norm = 1.0/(c_norm0 + c_norm1 + c_norm2 + c_norm3);
-
-            for (size_t n0 = 0; n0 < bw.N; n0++) {
-
+            vlow  = _mm256_castpd256_pd128(c_norm_v);
+            vhigh = _mm256_extractf128_pd(c_norm_v, 1); // high 128
+            vlow  = _mm_add_pd(vlow, vhigh);     // reduce down to 128
+    
+            __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+            c_norm = _mm_cvtsd_f64(_mm_add_sd(vlow, high64));  // reduce to scalar
+            c_norm = 1.0/c_norm;
+            c_norm_v = _mm256_set1_pd(c_norm);
+    
+            for (size_t n = 0; n < bw.N; n+=4){
                 // Load
-                alpha = bw.alpha[kTN + n0];
-
+                alpha = _mm256_load_pd(bw.alpha + kTN + n);
+        
                 // Calculate
-                alpha *= c_norm;
-
+                alpha = _mm256_mul_pd(alpha, c_norm_v);
+        
                 // Store
-                bw.alpha[kTN + n0] = alpha;
+                _mm256_store_pd(bw.alpha + kTN + n, alpha);
             }
-
+    
             // Store
             bw.c_norm[kT + t] = c_norm;
             neg_log_likelihood_sum += log(c_norm);
@@ -234,15 +228,15 @@ inline void backward_step(const BWdata& bw, const size_t& k) {
 
             for (size_t n1 = 0; n1 < bw.N; n1+=4) {
                 // Load
-                beta0 = bw.beta[kTN + bw.N + n1 + 0];
+                beta0 = bw.beta[kTN + bw.N + n1 + 0]; 
                 beta1 = bw.beta[kTN + bw.N + n1 + 1];
                 beta2 = bw.beta[kTN + bw.N + n1 + 2];
-                beta3 = bw.beta[kTN + bw.N + n1 + 3];
+                beta3 = bw.beta[kTN + bw.N + n1 + 3]; 
                 trans_prob0 = bw.trans_prob[n0 * bw.N + n1 + 0];
                 trans_prob1 = bw.trans_prob[n0 * bw.N + n1 + 1];
                 trans_prob2 = bw.trans_prob[n0 * bw.N + n1 + 2];
                 trans_prob3 = bw.trans_prob[n0 * bw.N + n1 + 3];
-                emit_prob0 = bw.emit_prob[observations*bw.N + (n1 + 0)];
+                emit_prob0 = bw.emit_prob[observations*bw.N + (n1 + 0)]; 
                 emit_prob1 = bw.emit_prob[observations*bw.N + (n1 + 1)];
                 emit_prob2 = bw.emit_prob[observations*bw.N + (n1 + 2)];
                 emit_prob3 = bw.emit_prob[observations*bw.N + (n1 + 3)];
@@ -272,7 +266,7 @@ inline void backward_step(const BWdata& bw, const size_t& k) {
 inline void compute_gamma(const BWdata& bw, const size_t& k) {
     __m256d gamma, g_sum;
     __m256d sigma0, sigma1, sigma2, sigma3, s_sum0, s_sum1, s_sum2, s_sum3, s_sum4;
-
+    
     for (size_t n0 = 0; n0 < bw.N; n0+=4) {
         // blocking here if you want to include n1 in this loop instead of after this loop
         g_sum = _mm256_load_pd(bw.ggamma + (k*bw.T + 0)*bw.N + n0);
@@ -295,7 +289,7 @@ inline void compute_gamma(const BWdata& bw, const size_t& k) {
                 sigma1 = _mm256_load_pd(bw.sigma + ((k*bw.T + t)*bw.N + n0+1) * bw.N + n1);
                 sigma2 = _mm256_load_pd(bw.sigma + ((k*bw.T + t)*bw.N + n0+2) * bw.N + n1);
                 sigma3 = _mm256_load_pd(bw.sigma + ((k*bw.T + t)*bw.N + n0+3) * bw.N + n1);
-
+                
                 s_sum0 = _mm256_add_pd(s_sum0, sigma0);
                 s_sum1 = _mm256_add_pd(s_sum1, sigma1);
                 s_sum2 = _mm256_add_pd(s_sum2, sigma2);
@@ -317,20 +311,20 @@ inline void update_trans_prob(const BWdata& bw) {
     double numerator_sum0, numerator_sum1, numerator_sum2, numerator_sum3;
     double* denominator_sum = (double *)aligned_alloc(32, bw.N*sizeof(double));
     double K_inv = 1.0/bw.K;
-
+    
     for (size_t n = 0; n < bw.N; n++) {
         denominator_sum_n = 0;
         g0_sum = 0;
-
+        
         for (size_t k = 0; k < bw.K; k++) {
             denominator_sum_n += bw.gamma_sum[k*bw.N + n];
             g0_sum += bw.ggamma[(k*bw.T)*bw.N + n];
         }
-
+        
         denominator_sum[n] = 1.0/denominator_sum_n;
         bw.init_prob[n] = g0_sum*K_inv;
     }
-
+    
     for (size_t n0 = 0; n0 < bw.N; n0++) {
         for (size_t n1 = 0; n1 < bw.N; n1+=4) {
             // Init (trans_prob)
@@ -365,7 +359,7 @@ inline void update_emit_prob(const BWdata& bw) {
     double ggamma_cond_sum0, ggamma_cond_sum1, ggamma_cond_sum2, ggamma_cond_sum3;
     double* denominator_sum = (double *)aligned_alloc(32,bw.N * sizeof(double));
     double* numerator_sum = (double *)aligned_alloc(32,bw.N*bw.M * sizeof(double));
-
+    
     // add last bw.T-step to bw.gamma_sum
     for (size_t k = 0; k < bw.K; k++) {
         for (size_t n = 0; n < bw.N; n+=4) {
@@ -397,7 +391,7 @@ inline void update_emit_prob(const BWdata& bw) {
             denominator_sum6 += bw.gamma_sum[k*bw.N + n+6];
             denominator_sum7 += bw.gamma_sum[k*bw.N + n+7];
         }
-
+        
         denominator_sum[n+0] = denominator_sum0;
         denominator_sum[n+1] = denominator_sum1;
         denominator_sum[n+2] = denominator_sum2;
@@ -415,7 +409,7 @@ inline void update_emit_prob(const BWdata& bw) {
             ggamma_cond_sum_tot1 = 0.0;
             ggamma_cond_sum_tot2 = 0.0;
             ggamma_cond_sum_tot3 = 0.0;
-
+            
             for (size_t k = 0; k < bw.K; k++) {
                 ggamma_cond_sum0 = 0.0;
                 ggamma_cond_sum1 = 0.0;
@@ -465,15 +459,14 @@ inline void update_emit_prob(const BWdata& bw) {
 
     // emit_prob
     for (size_t n = 0; n < bw.N; n++) {
-        double denominator_sum_inv = 1.0/denominator_sum[n];
+        double denominator_sum_inv = 1.0/denominator_sum[n]; 
         for (size_t m = 0; m < bw.M; m+=4) {
-            bw.emit_prob[n*bw.M + (m+0)] = numerator_sum[n*bw.M + m+0] * denominator_sum_inv;
-            bw.emit_prob[n*bw.M + (m+1)] = numerator_sum[n*bw.M + m+1] * denominator_sum_inv;
-            bw.emit_prob[n*bw.M + (m+2)] = numerator_sum[n*bw.M + m+2] * denominator_sum_inv;
-            bw.emit_prob[n*bw.M + (m+3)] = numerator_sum[n*bw.M + m+3] * denominator_sum_inv;
+            bw.emit_prob[(m+0)*bw.N + n] = numerator_sum[n*bw.M + m+0] * denominator_sum_inv;
+            bw.emit_prob[(m+1)*bw.N + n] = numerator_sum[n*bw.M + m+1] * denominator_sum_inv;
+            bw.emit_prob[(m+2)*bw.N + n] = numerator_sum[n*bw.M + m+2] * denominator_sum_inv;
+            bw.emit_prob[(m+3)*bw.N + n] = numerator_sum[n*bw.M + m+3] * denominator_sum_inv;
         }
     }
-
     free(denominator_sum);
     free(numerator_sum);
 }
