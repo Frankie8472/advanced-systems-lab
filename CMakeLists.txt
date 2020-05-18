@@ -19,6 +19,7 @@ add_executable(verification
     implementations/vectoworized.cpp
     implementations/combined_optimized.cpp
     implementations/unrolled_emit_prob.cpp
+    implementations/unrolled_optimized.cpp
 )
 
 add_executable(benchmarks
@@ -34,4 +35,5 @@ add_executable(benchmarks
     implementations/vectoworized.cpp
     implementations/combined_optimized.cpp
     implementations/unrolled_emit_prob.cpp
+    implementations/unrolled_optimized.cpp
 )
