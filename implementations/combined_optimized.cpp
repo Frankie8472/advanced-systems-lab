@@ -307,45 +307,46 @@ inline void compute_gamma(const BWdata& bw, const size_t& k) {
 
 inline void update_trans_prob(const BWdata& bw) {
     //Init (init_prob)
-    double g0_sum, denominator_sum_n, denominator_sum_inv;
-    double numerator_sum0, numerator_sum1, numerator_sum2, numerator_sum3;
+    __m256d ones, gamma_sum, gamma, g0_sum, denominator_sum_n, K_inv, numerator_sum, sigma_sum, denominator_sum_n0;
     double* denominator_sum = (double *)aligned_alloc(32, bw.N*sizeof(double));
-    double K_inv = 1.0/bw.K;
-    
-    for (size_t n = 0; n < bw.N; n++) {
-        denominator_sum_n = 0;
-        g0_sum = 0;
-        
-        for (size_t k = 0; k < bw.K; k++) {
-            denominator_sum_n += bw.gamma_sum[k*bw.N + n];
-            g0_sum += bw.ggamma[(k*bw.T)*bw.N + n];
+
+    K_inv = _mm256_set1_pd(1.0/bw.K);
+    ones = _mm256_set1_pd(1.0);
+
+    for (size_t n = 0; n < bw.N; n+=4) {
+        denominator_sum_n = _mm256_load_pd(bw.gamma_sum + 0*bw.N + n);
+        g0_sum = _mm256_load_pd(bw.ggamma + (0*bw.T)*bw.N + n);
+
+        for (size_t k = 1; k < bw.K; k++) {
+            gamma_sum = _mm256_load_pd(bw.gamma_sum + k*bw.N + n);
+            denominator_sum_n = _mm256_add_pd(denominator_sum_n, gamma_sum);
+
+            gamma = _mm256_load_pd(bw.ggamma + (k*bw.T)*bw.N + n);
+            g0_sum = _mm256_add_pd(gamma, g0_sum);
         }
-        
-        denominator_sum[n] = 1.0/denominator_sum_n;
-        bw.init_prob[n] = g0_sum*K_inv;
+
+        denominator_sum_n = _mm256_div_pd(ones, denominator_sum_n);
+        _mm256_store_pd(denominator_sum + n, denominator_sum_n);
+
+        g0_sum = _mm256_mul_pd(g0_sum, K_inv);
+        _mm256_store_pd(bw.init_prob + n, g0_sum);
     }
-    
+
     for (size_t n0 = 0; n0 < bw.N; n0++) {
         for (size_t n1 = 0; n1 < bw.N; n1+=4) {
             // Init (trans_prob)
-            numerator_sum0 = 0.0;
-            numerator_sum1 = 0.0;
-            numerator_sum2 = 0.0;
-            numerator_sum3 = 0.0;
+            numerator_sum = _mm256_load_pd(bw.sigma_sum + (0*bw.N + n0)*bw.N + n1);
 
-            for (size_t k = 0; k < bw.K; k++) {
+            for (size_t k = 1; k < bw.K; k++) {
                 // Calculate (trans_prob)
-                numerator_sum0 += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1+0];
-                numerator_sum1 += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1+1];
-                numerator_sum2 += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1+2];
-                numerator_sum3 += bw.sigma_sum[(k*bw.N + n0)*bw.N + n1+3];
+                sigma_sum = _mm256_load_pd(bw.sigma_sum + (k*bw.N + n0)*bw.N + n1);
+                numerator_sum = _mm256_add_pd(numerator_sum, sigma_sum);
             }
 
             // Store (trans_prob)
-            bw.trans_prob[n0*bw.N + n1+0] = numerator_sum0*denominator_sum[n0];
-            bw.trans_prob[n0*bw.N + n1+1] = numerator_sum1*denominator_sum[n0];
-            bw.trans_prob[n0*bw.N + n1+2] = numerator_sum2*denominator_sum[n0];
-            bw.trans_prob[n0*bw.N + n1+3] = numerator_sum3*denominator_sum[n0];
+            denominator_sum_n0 = _mm256_broadcast_sd(denominator_sum + n0);
+            numerator_sum = _mm256_mul_pd(numerator_sum, denominator_sum_n0);
+            _mm256_store_pd(bw.trans_prob + n0*bw.N + n1, numerator_sum);
         }
     }
     free(denominator_sum);
