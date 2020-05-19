@@ -52,7 +52,7 @@ total: (1 add + 1 mul)*K*N²*T + (2 add + 5 mul)*K*N²*(T-1) + (2 adds)*K*N² + 
     ≈ 9*T*K*N² - 5*K*N² + N² + 8*T*K*N + 3*K*N + K + 2*K*N*M + 2*T*K + N + N*M
 */
 
-int flops;
+size_t flops;
 
 // adjust max_iterations if it's too slow
 size_t max_iterations = 100;
@@ -139,6 +139,7 @@ void perf_test(compute_bw_func func, const BWdata& bw) {
     else{
         printf("Iterations to converge: %ld\n", iter);
     }
+    printf("Flops: %zu\n", max_iterations*flops);
     printf("Cycles: %f\n", round(cycles));
     printf("Performance: %f\n", perf);
 }

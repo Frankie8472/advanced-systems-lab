@@ -99,6 +99,7 @@ inline void forward_step(const BWdata& bw) {
     // t = 0, base case
 
     // Init
+    // TODO: Unroll k
     for(size_t k=0; k < bw.K; k++){
         c_norm_v = _mm256_setzero_pd();
         kT = k*bw.T;
@@ -228,6 +229,13 @@ inline void backward_step(const BWdata& bw, const size_t& k) {
         c_norm = _mm256_broadcast_sd(bw.c_norm + kT + t);
         kTN = (kT+t)*bw.N;
 
+        for (size_t n1 = 0; n1 < bw.N; n1+=4) {
+            beta = _mm256_load_pd(bw.beta + (kT+t)*bw.N + bw.N + n1);
+            emit_prob = _mm256_load_pd(bw.emit_prob + observations*bw.N + n1);
+            beta_emit_prob = _mm256_mul_pd(beta, emit_prob);
+            _mm256_store_pd(denominator_sum + n1, beta_emit_prob);
+        }
+
         for (size_t n0 = 0; n0 < bw.N; n0+=4) {
 
             // Load
@@ -242,18 +250,13 @@ inline void backward_step(const BWdata& bw, const size_t& k) {
 
             for (size_t n1 = 0; n1 < bw.N; n1+=4) {
                 // Load
-                // TODO: This can be optimized
-                beta = _mm256_load_pd(bw.beta + (kT+t)*bw.N + bw.N + n1);
+                beta_emit_prob = _mm256_load_pd(denominator_sum + n1);
 
                 trans_prob0 = _mm256_load_pd(bw.trans_prob + (n0+0) * bw.N + n1);
                 trans_prob1 = _mm256_load_pd(bw.trans_prob + (n0+1) * bw.N + n1);
                 trans_prob2 = _mm256_load_pd(bw.trans_prob + (n0+2) * bw.N + n1);
                 trans_prob3 = _mm256_load_pd(bw.trans_prob + (n0+3) * bw.N + n1);
 
-                emit_prob = _mm256_load_pd(bw.emit_prob + observations*bw.N + n1);
-
-                // Calculate & store
-                beta_emit_prob = _mm256_mul_pd(beta, emit_prob);
                 beta_temp0 = _mm256_mul_pd(beta_emit_prob, trans_prob0);
                 beta_temp1 = _mm256_mul_pd(beta_emit_prob, trans_prob1);
                 beta_temp2 = _mm256_mul_pd(beta_emit_prob, trans_prob2);
