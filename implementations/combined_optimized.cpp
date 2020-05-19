@@ -33,11 +33,18 @@ size_t comp_bw_combined(const BWdata& bw);
 
 REGISTER_FUNCTION_TRANSPOSE_EMIT_PROB(comp_bw_combined, "combined", "Combined Optimized");
 
+static double* denominator_sum = nullptr;
+static double* numerator_sum = nullptr;
 
 size_t comp_bw_combined(const BWdata& bw){
     size_t res = 0;
     double neg_log_likelihood_sum, neg_log_likelihood_sum_old = 0; // Does not have to be initialized as it will be if and only if i > 0
     bool first = true;
+
+    denominator_sum = (double *)aligned_alloc(32,bw.N * sizeof(double));
+    numerator_sum = (double *)aligned_alloc(32,bw.N*bw.M * sizeof(double));
+    assert(denominator_sum != nullptr && "Failed to allocate memory");
+    assert(numerator_sum != nullptr && "Failed to allocate memory");
 
     // run for all iterations
     for (size_t i = 0; i < bw.max_iterations; i++) {
@@ -67,6 +74,10 @@ size_t comp_bw_combined(const BWdata& bw){
         update_trans_prob(bw);
         update_emit_prob(bw);
     }
+
+    free(denominator_sum);
+    free(numerator_sum);
+
     return res;
 }
 
@@ -191,22 +202,22 @@ inline void forward_step(const BWdata& bw) {
 
 inline void backward_step(const BWdata& bw, const size_t& k) {
     // Init
-    double alpha, c_norm, gamma, sigma;
-    double beta_sum0, beta_temp0, beta0, emit_prob0, trans_prob0;
-    double beta_sum1, beta_temp1, beta1, emit_prob1, trans_prob1;
-    double beta_sum2, beta_temp2, beta2, emit_prob2, trans_prob2;
-    double beta_sum3, beta_temp3, beta3, emit_prob3, trans_prob3;
+    __m256d c_norm, beta, gamma, emit_prob, beta_emit_prob, alpha;
+    __m256d beta_sum0, beta_temp0, trans_prob0, alpha0;
+    __m256d beta_sum1, beta_temp1, trans_prob1, alpha1;
+    __m256d beta_sum2, beta_temp2, trans_prob2, alpha2;
+    __m256d beta_sum3, beta_temp3, trans_prob3, alpha3;
 
-    size_t observations, kTN, kTNN, kT, nN;
+    size_t observations, kTN, kT, nN;
     // t = bw.T, base case
     kTN = (k*bw.T + (bw.T-1))*bw.N;
 
     // Load
     memcpy(bw.ggamma + kTN, bw.alpha + kTN, bw.N * sizeof(double));
-    c_norm = bw.c_norm[k*bw.T + (bw.T-1)];
-    for (size_t n = 0; n < bw.N; n++) {
+    c_norm = _mm256_broadcast_sd(bw.c_norm + k*bw.T + (bw.T-1));
+    for (size_t n = 0; n < bw.N; n+=4) {
         // Store
-        bw.beta[kTN + n] = c_norm;
+        _mm256_store_pd(bw.beta + kTN + n, c_norm);
     }
 
     // Recursion step
@@ -214,52 +225,70 @@ inline void backward_step(const BWdata& bw, const size_t& k) {
     for (int t = bw.T-2; t >= 0; t--) {
         // Load
         observations = bw.observations[kT + (t+1)];
-        c_norm = bw.c_norm[kT + t];
-        kTN = (kT + t) * bw.N;
+        c_norm = _mm256_broadcast_sd(bw.c_norm + kT + t);
+        kTN = (kT+t)*bw.N;
 
-        for (size_t n0 = 0; n0 < bw.N; n0++) {
+        for (size_t n0 = 0; n0 < bw.N; n0+=4) {
 
             // Load
-            beta_sum0 = 0.0;
-            beta_sum1 = 0.0;
-            beta_sum2 = 0.0;
-            beta_sum3 = 0.0;
-            alpha = bw.alpha[(kT + t)*bw.N + n0];
-            kTNN = (kTN + n0)*bw.N;
+            beta_sum0 = _mm256_setzero_pd();
+            beta_sum1 = _mm256_setzero_pd();
+            beta_sum2 = _mm256_setzero_pd();
+            beta_sum3 = _mm256_setzero_pd();
+            alpha0 = _mm256_broadcast_sd(bw.alpha + (kT + t)*bw.N + n0 + 0);
+            alpha1 = _mm256_broadcast_sd(bw.alpha + (kT + t)*bw.N + n0 + 1);
+            alpha2 = _mm256_broadcast_sd(bw.alpha + (kT + t)*bw.N + n0 + 2);
+            alpha3 = _mm256_broadcast_sd(bw.alpha + (kT + t)*bw.N + n0 + 3);
 
             for (size_t n1 = 0; n1 < bw.N; n1+=4) {
                 // Load
-                beta0 = bw.beta[kTN + bw.N + n1 + 0]; 
-                beta1 = bw.beta[kTN + bw.N + n1 + 1];
-                beta2 = bw.beta[kTN + bw.N + n1 + 2];
-                beta3 = bw.beta[kTN + bw.N + n1 + 3]; 
-                trans_prob0 = bw.trans_prob[n0 * bw.N + n1 + 0];
-                trans_prob1 = bw.trans_prob[n0 * bw.N + n1 + 1];
-                trans_prob2 = bw.trans_prob[n0 * bw.N + n1 + 2];
-                trans_prob3 = bw.trans_prob[n0 * bw.N + n1 + 3];
-                emit_prob0 = bw.emit_prob[observations*bw.N + (n1 + 0)]; 
-                emit_prob1 = bw.emit_prob[observations*bw.N + (n1 + 1)];
-                emit_prob2 = bw.emit_prob[observations*bw.N + (n1 + 2)];
-                emit_prob3 = bw.emit_prob[observations*bw.N + (n1 + 3)];
+                // TODO: This can be optimized
+                beta = _mm256_load_pd(bw.beta + (kT+t)*bw.N + bw.N + n1);
+
+                trans_prob0 = _mm256_load_pd(bw.trans_prob + (n0+0) * bw.N + n1);
+                trans_prob1 = _mm256_load_pd(bw.trans_prob + (n0+1) * bw.N + n1);
+                trans_prob2 = _mm256_load_pd(bw.trans_prob + (n0+2) * bw.N + n1);
+                trans_prob3 = _mm256_load_pd(bw.trans_prob + (n0+3) * bw.N + n1);
+
+                emit_prob = _mm256_load_pd(bw.emit_prob + observations*bw.N + n1);
 
                 // Calculate & store
-                beta_temp0 = beta0 * trans_prob0 * emit_prob0;
-                beta_temp1 = beta1 * trans_prob1 * emit_prob1;
-                beta_temp2 = beta2 * trans_prob2 * emit_prob2;
-                beta_temp3 = beta3 * trans_prob3 * emit_prob3;
-                beta_sum0 += beta_temp0;
-                beta_sum1 += beta_temp1;
-                beta_sum2 += beta_temp2;
-                beta_sum3 += beta_temp3;
-                bw.sigma[kTNN + n1 + 0] = alpha * beta_temp0;
-                bw.sigma[kTNN + n1 + 1] = alpha * beta_temp1;
-                bw.sigma[kTNN + n1 + 2] = alpha * beta_temp2;
-                bw.sigma[kTNN + n1 + 3] = alpha * beta_temp3;
+                beta_emit_prob = _mm256_mul_pd(beta, emit_prob);
+                beta_temp0 = _mm256_mul_pd(beta_emit_prob, trans_prob0);
+                beta_temp1 = _mm256_mul_pd(beta_emit_prob, trans_prob1);
+                beta_temp2 = _mm256_mul_pd(beta_emit_prob, trans_prob2);
+                beta_temp3 = _mm256_mul_pd(beta_emit_prob, trans_prob3);
+
+                beta_sum0 = _mm256_fmadd_pd(beta_emit_prob, trans_prob0, beta_sum0);
+                beta_sum1 = _mm256_fmadd_pd(beta_emit_prob, trans_prob1, beta_sum1);
+                beta_sum2 = _mm256_fmadd_pd(beta_emit_prob, trans_prob2, beta_sum2);
+                beta_sum3 = _mm256_fmadd_pd(beta_emit_prob, trans_prob3, beta_sum3);
+
+                beta_temp0 = _mm256_mul_pd(alpha0, beta_temp0);
+                beta_temp1 = _mm256_mul_pd(alpha1, beta_temp1);
+                beta_temp2 = _mm256_mul_pd(alpha2, beta_temp2);
+                beta_temp3 = _mm256_mul_pd(alpha3, beta_temp3);
+
+                _mm256_store_pd(bw.sigma + (kTN + n0+0)*bw.N + n1, beta_temp0);
+                _mm256_store_pd(bw.sigma + (kTN + n0+1)*bw.N + n1, beta_temp1);
+                _mm256_store_pd(bw.sigma + (kTN + n0+2)*bw.N + n1, beta_temp2);
+                _mm256_store_pd(bw.sigma + (kTN + n0+3)*bw.N + n1, beta_temp3);
             }
 
             // Calculate & store
-            bw.beta[kTN + n0] = (beta_sum0 + beta_sum1 + beta_sum2 + beta_sum3) * c_norm;
-            bw.ggamma[kTN + n0] = alpha * (beta_sum0 + beta_sum1 + beta_sum2 + beta_sum3);
+            __m256d sum_01 = _mm256_hadd_pd(beta_sum0, beta_sum1);
+            __m256d sum_23 = _mm256_hadd_pd(beta_sum2, beta_sum3);
+
+            __m256d blended = _mm256_blend_pd(sum_01, sum_23, 0b1100);
+
+            __m256d permuted = _mm256_permute2f128_pd(sum_01, sum_23, 0b00100001);
+
+            __m256d tmp = _mm256_add_pd(blended, permuted);
+            beta = _mm256_mul_pd(tmp, c_norm);
+            alpha = _mm256_load_pd(bw.alpha + (kT + t)*bw.N + n0);
+            gamma = _mm256_mul_pd(tmp, alpha);
+            _mm256_store_pd(bw.beta + kTN + n0, beta);
+            _mm256_store_pd(bw.ggamma + kTN + n0, gamma);
         }
     }
 }
@@ -309,7 +338,6 @@ inline void compute_gamma(const BWdata& bw, const size_t& k) {
 inline void update_trans_prob(const BWdata& bw) {
     //Init (init_prob)
     __m256d ones, gamma_sum, gamma, g0_sum, denominator_sum_n, K_inv, numerator_sum, sigma_sum, denominator_sum_n0;
-    double* denominator_sum = (double *)aligned_alloc(32, bw.N*sizeof(double));
 
     K_inv = _mm256_set1_pd(1.0/bw.K);
     ones = _mm256_set1_pd(1.0);
@@ -350,7 +378,6 @@ inline void update_trans_prob(const BWdata& bw) {
             _mm256_store_pd(bw.trans_prob + n0*bw.N + n1, numerator_sum);
         }
     }
-    free(denominator_sum);
 }
 
 inline void update_emit_prob(const BWdata& bw) {
@@ -359,8 +386,6 @@ inline void update_emit_prob(const BWdata& bw) {
     __m256d ones, ggamma_cond_sum_tot, ggamma_cond_sum, denominator_sum_inv;
     __m256d denominator_sum_n0, numerator_sum_n0;
     __m256d denominator_sum_n1, numerator_sum_n1;
-    double* denominator_sum = (double *)aligned_alloc(32,bw.N * sizeof(double));
-    double* numerator_sum = (double *)aligned_alloc(32,bw.N*bw.M * sizeof(double));
     ones = _mm256_set1_pd(1.0);
 
     // add last bw.T-step to bw.gamma_sum
@@ -438,7 +463,4 @@ inline void update_emit_prob(const BWdata& bw) {
             _mm256_store_pd(bw.emit_prob + m*bw.N + n + 4, numerator_sum_n1);
         }
     }
-
-    free(denominator_sum);
-    free(numerator_sum);
 }
