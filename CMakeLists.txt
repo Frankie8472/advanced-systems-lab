@@ -5,7 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-variable -O3 -fno-tree-vectorize -ffast-math -mavx2 -mfma -march=native")
 
 SET_SOURCE_FILES_PROPERTIES(implementations/vectoworized.cpp PROPERTIES COMPILE_FLAGS "-fno-tree-vectorize")
-SET_SOURCE_FILES_PROPERTIES(helper_utilities.cpp PROPERTIES COMPILE_FLAGS "-fno-fast-math")
+SET_SOURCE_FILES_PROPERTIES(helper_utilities.cpp PROPERTIES COMPILE_FLAGS "-fno-fast-math -O0")
+SET_SOURCE_FILES_PROPERTIES(verifications.cpp PROPERTIES COMPILE_FLAGS "-fno-fast-math -O0")
 
 add_executable(verification
     common.cpp
