@@ -68,7 +68,7 @@ size_t comp_bw_scalar_unroll(const BWdata& bw){
 }
 
 
-inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
+static inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
     //Init
     double c_norm, alpha, alpha_sum, init_prob, emit_prob, trans_prob;
     double c_norm0, alpha0, alpha_sum0, init_prob0, emit_prob0, trans_prob0;
@@ -77,6 +77,7 @@ inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
     double c_norm3, alpha3, alpha_sum3, init_prob3, emit_prob3, trans_prob3;
 
     size_t kTN, kT;
+    size_t kT0N, kT1N, kT2N, kT3N;
     // t = 0, base case
 
     // Init
@@ -220,7 +221,6 @@ inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
             neg_log_likelihood_sum += log(c_norm);
         }
     }
-
 }
 
 inline void backward_step(const BWdata& bw, const size_t& k) {

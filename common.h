@@ -216,7 +216,7 @@ public:
         {                                                         \
             FuncRegister::add_function(f, name, description);     \
         }                                                         \
-    } f##__BW_;
+    } f##__BW_
 
 //Macro to register a function that requires emit_prob to be column major
 #define REGISTER_FUNCTION_TRANSPOSE_EMIT_PROB(f, name, description)                   \
@@ -226,7 +226,7 @@ public:
         {                                                         \
             FuncRegister::add_function(f, name, description, true);     \
         }                                                         \
-    } f##__BW_;
+    } f##__BW_
 
 // Macro to register a function and a name that should be executed
 #define SET_BASELINE(f, name)                                     \
@@ -236,6 +236,6 @@ public:
         {                                                         \
             FuncRegister::set_baseline(f, name);                  \
         }                                                         \
-    } f##__BW_;
+    } f##__BW_
 
 #endif /* __BW_COMMON_H */
