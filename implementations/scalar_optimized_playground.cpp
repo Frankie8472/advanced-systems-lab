@@ -21,14 +21,14 @@
 #include "../common.h"
 
 
-void forward_step(const BWdata& bw);
-void backward_step(const BWdata& bw);
-void compute_gamma(const BWdata& bw);
-void compute_sigma(const BWdata& bw);
-void update_init_prob(const BWdata& bw);
-void update_trans_prob(const BWdata& bw);
-void update_emit_prob(const BWdata& bw);
-size_t comp_bw_scalar_play(const BWdata& bw);
+static void forward_step(const BWdata& bw);
+static void backward_step(const BWdata& bw);
+static void compute_gamma(const BWdata& bw);
+static void compute_sigma(const BWdata& bw);
+static void update_init_prob(const BWdata& bw);
+static void update_trans_prob(const BWdata& bw);
+static void update_emit_prob(const BWdata& bw);
+static size_t comp_bw_scalar_play(const BWdata& bw);
 
 
 REGISTER_FUNCTION(comp_bw_scalar_play, "scalar-play", "Scalar Optimized: for testing things out");

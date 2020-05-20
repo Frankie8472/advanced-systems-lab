@@ -27,27 +27,26 @@
 #include "../common.h"
 //#include "../helper_utilities.h"
 
-void forward_step(const BWdata& bw);
-void backward_step(const BWdata& bw);
-void compute_gamma(const BWdata& bw);
-void compute_sigma(const BWdata& bw);
-void compute_sigma_sum(const BWdata& bw);
-void update_init_prob(const BWdata& bw);
-void update_trans_prob(const BWdata& bw);
-void update_emit_prob(const BWdata& bw);
-size_t comp_bw_vectOwOrized(const BWdata& bw);
+static void forward_step(const BWdata& bw);
+static void backward_step(const BWdata& bw);
+static void compute_gamma(const BWdata& bw);
+static void compute_sigma(const BWdata& bw);
+static void update_init_prob(const BWdata& bw);
+static void update_trans_prob(const BWdata& bw);
+static void update_emit_prob(const BWdata& bw);
+static size_t comp_bw_vectOwOrized(const BWdata& bw);
 
 REGISTER_FUNCTION(comp_bw_vectOwOrized, "vectOwOrized", "Vector Optimized: AVX2 & FMA");
 
 
 /* BEGIN DECLARE HELPER STUFF */
 
-void transpose_matrix(double* output, const double* input, const size_t N, const size_t M);
-void rotate_indices_left(double* output, const double* input, const size_t N, const size_t K, const size_t T);
-void rotate_somehow_last_t_index_gets_value_0_important(double* output, const double* input, const size_t K, const size_t N, const size_t M, const size_t T);
+static void transpose_matrix(double* output, const double* input, const size_t N, const size_t M);
+static void rotate_indices_left(double* output, const double* input, const size_t N, const size_t K, const size_t T);
+//static void rotate_somehow_last_t_index_gets_value_0_important(double* output, const double* input, const size_t K, const size_t N, const size_t M, const size_t T);
 
-__m256d _mm256_stuff_pd(const __m256d incr_vec, const double* input_array, const size_t index_0, const size_t index_1, const size_t index_2, const size_t index_3);
-__m256d _mm256_sumFourRowsIntoOneCol_pd(const __m256d row_0, const __m256d row_1, const __m256d row_2, const __m256d row_3);
+static __m256d _mm256_stuff_pd(const __m256d incr_vec, const double* input_array, const size_t index_0, const size_t index_1, const size_t index_2, const size_t index_3);
+static __m256d _mm256_sumFourRowsIntoOneCol_pd(const __m256d row_0, const __m256d row_1, const __m256d row_2, const __m256d row_3);
 
 // forward and backward pass are recursively dependent on T
 #define STRIDE_LAYER_T_RECURSIVE 1

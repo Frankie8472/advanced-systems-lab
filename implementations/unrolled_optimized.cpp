@@ -21,20 +21,18 @@
 #include "../common.h"
 
 
-void forward_step(const BWdata& bw, double& neg_log_likelihood_sum);
-void backward_step(const BWdata& bw, const size_t& k);
-void compute_gamma(const BWdata& bw, const size_t& k);
-void compute_sigma(const BWdata& bw);
-void update_init_prob(const BWdata& bw);
-void update_trans_prob(const BWdata& bw);
-void update_emit_prob(const BWdata& bw);
-size_t comp_bw_scalar_unroll(const BWdata& bw);
+static void forward_step(const BWdata& bw, double& neg_log_likelihood_sum);
+static void backward_step(const BWdata& bw, const size_t& k);
+static void compute_gamma(const BWdata& bw, const size_t& k);
+static void update_trans_prob(const BWdata& bw);
+static void update_emit_prob(const BWdata& bw);
+static size_t comp_bw_scalar_unroll(const BWdata& bw);
 
 
 REGISTER_FUNCTION(comp_bw_scalar_unroll, "other-unroll", "Another approach to unrolling the code");
 
 
-size_t comp_bw_scalar_unroll(const BWdata& bw){
+static size_t comp_bw_scalar_unroll(const BWdata& bw){
     size_t res = 0;
     double neg_log_likelihood_sum, neg_log_likelihood_sum_old = 0; // Does not have to be initialized as it will be if and only if i > 0
     bool first = true;
@@ -68,7 +66,7 @@ size_t comp_bw_scalar_unroll(const BWdata& bw){
 }
 
 
-inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
+static inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
     //Init
     double c_norm, alpha, alpha_sum, init_prob, emit_prob, trans_prob;
     double c_norm0, alpha0, alpha_sum0, init_prob0, emit_prob0, trans_prob0;
@@ -223,7 +221,7 @@ inline void forward_step(const BWdata& bw, double& neg_log_likelihood_sum) {
     }
 }
 
-inline void backward_step(const BWdata& bw, const size_t& k) {
+static inline void backward_step(const BWdata& bw, const size_t& k) {
     // Init
     double alpha, c_norm, gamma, sigma;
     double beta_sum0, beta_temp0, beta0, emit_prob0, trans_prob0;
@@ -298,7 +296,7 @@ inline void backward_step(const BWdata& bw, const size_t& k) {
     }
 }
 
-inline void compute_gamma(const BWdata& bw, const size_t& k) {
+static inline void compute_gamma(const BWdata& bw, const size_t& k) {
     double g_sum0, g_sum1, g_sum2, g_sum3;
     double s_sum0, s_sum1, s_sum2, s_sum3, s_sum4, s_sum5, s_sum6, s_sum7, s_sum8, s_sum9, s_sum10, s_sum11, s_sum12, s_sum13, s_sum14, s_sum15, s_sum16;
     for (size_t n0 = 0; n0 < bw.N; n0+=4) {
@@ -380,7 +378,7 @@ inline void compute_gamma(const BWdata& bw, const size_t& k) {
 }
 
 
-inline void update_trans_prob(const BWdata& bw) {
+static inline void update_trans_prob(const BWdata& bw) {
     //Init (init_prob)
     double g0_sum, denominator_sum_n, denominator_sum_inv;
     double numerator_sum0, numerator_sum1, numerator_sum2, numerator_sum3;
@@ -427,7 +425,7 @@ inline void update_trans_prob(const BWdata& bw) {
 }
 
 
-inline void update_emit_prob(const BWdata& bw) {
+static inline void update_emit_prob(const BWdata& bw) {
     // Init
     double denominator_sum0, denominator_sum1, denominator_sum2, denominator_sum3, denominator_sum4, denominator_sum5, denominator_sum6, denominator_sum7;
     double ggamma_cond_sum_tot0, ggamma_cond_sum_tot1, ggamma_cond_sum_tot2, ggamma_cond_sum_tot3;
