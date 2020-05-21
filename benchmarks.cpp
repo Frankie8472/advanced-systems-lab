@@ -122,7 +122,6 @@ void perf_test(compute_bw_func func, const BWdata& bw) {
         total_cycles += cycles;
         iter /= num_runs;
         total_iter += iter;
-
     }
     total_cycles /= REP;
     total_iter /= REP;
@@ -134,9 +133,7 @@ void perf_test(compute_bw_func func, const BWdata& bw) {
     printf("Total iterations: %ld\n", max_iterations);
     if (iter == 0){
         printf("\x1b[1;36mWarning:\x1b[0m has not converged within the maximum iterations\n");
-
-    }
-    else{
+    } else {
         printf("Iterations to converge: %ld\n", iter);
     }
     printf("Flops: %zu\n", max_iterations*flops);
@@ -236,7 +233,7 @@ int main(int argc, char **argv) {
                 free(new_emit_prob);
             }
 
-            printf("Running: %s: %s\n", FuncRegister::funcs->at(i).name.c_str(), FuncRegister::funcs->at(i).name.c_str());
+            printf("Running: %s: %s\n", FuncRegister::funcs->at(i).name.c_str(), FuncRegister::funcs->at(i).description.c_str());
             perf_test(FuncRegister::funcs->at(i).func, bw);
             printf("\n");
         }

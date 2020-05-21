@@ -486,7 +486,7 @@ static inline void update_emit_prob_comb(const BWdata& bw) {
 
 static size_t comp_bw_combined(const BWdata& bw){
     size_t res = 0;
-    double neg_log_likelihood_sum, neg_log_likelihood_sum_old = 0; // Does not have to be initialized as it will be if and only if i > 0
+    double neg_log_likelihood_sum, neg_log_likelihood_sum_old = 0;
     bool first = true;
 
     denominator_sum = (double *)aligned_alloc(32,bw.N * sizeof(double));
@@ -505,10 +505,41 @@ static size_t comp_bw_combined(const BWdata& bw){
         }
 
         for (size_t k = 0; k < bw.K; k++) {
-            for (size_t t = 0; t < bw.T; t++) {
-                neg_log_likelihood_sum = neg_log_likelihood_sum + log(bw.c_norm[k*bw.T + t]);
+            // Need to do this in blocks to prevent the numbers from getting too big
+            size_t t_block = 0;
+            #define T_BLOCK_SIZE 64
+            for (t_block = 0; t_block + T_BLOCK_SIZE < bw.T; t_block+=T_BLOCK_SIZE) {
+                __m256d mult = _mm256_set1_pd(1);
+                for (size_t t = t_block; t < t_block+T_BLOCK_SIZE; t+=4) {
+                    __m256d c_norm0 = _mm256_load_pd(bw.c_norm + (k+0)*bw.T + t);
+                    mult = _mm256_mul_pd(mult, c_norm0);
+                }
+
+                __m128d vlow  = _mm256_castpd256_pd128(mult);
+                __m128d vhigh = _mm256_extractf128_pd(mult, 1); // high 128
+                vlow  = _mm_mul_pd(vlow, vhigh);     // reduce down to 128
+                __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+                double sum = _mm_cvtsd_f64(_mm_mul_sd(vlow, high64));  // reduce to scalar
+                // Cannot take log out of this loop because the number would be too big and go to inf.
+                neg_log_likelihood_sum += log(sum);
             }
+
+            // do rest of the block
+            __m256d mult = _mm256_set1_pd(1);
+            for (size_t t = t_block; t < bw.T; t+=4) {
+                __m256d c_norm0 = _mm256_load_pd(bw.c_norm + (k+0)*bw.T + t);
+                mult = _mm256_mul_pd(mult, c_norm0);
+            }
+
+            __m128d vlow  = _mm256_castpd256_pd128(mult);
+            __m128d vhigh = _mm256_extractf128_pd(mult, 1); // high 128
+            vlow  = _mm_mul_pd(vlow, vhigh);     // reduce down to 128
+            __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+            double sum = _mm_cvtsd_f64(_mm_mul_sd(vlow, high64));  // reduce to scalar
+            // Cannot take log out of this loop because the number would go too big
+            neg_log_likelihood_sum += log(sum);
         }
+
         bw.neg_log_likelihoods[i] = neg_log_likelihood_sum;
 
         if (first && i > 0 && fabs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < EPSILON){
