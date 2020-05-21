@@ -125,7 +125,7 @@ This are the sizes of the arrays in the BWdata struct. Their sizes are given in 
 * gamma\_sum: `K*N`
 * sigma\_sum: `K*N*N`
 
-So the total is: `(N + N*N + N*M + 2*K*T + max_iterations + 3*K*T*N + K*T*N*N + K*N + K*N*N)*8 + 144' bytes.
+So the total is: `(N + N*N + N*M + 2*K*T + max_iterations + 3*K*T*N + K*T*N*N + K*N + K*N*N)*8 + 144` bytes.
 
 ## Verification
 
