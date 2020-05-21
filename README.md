@@ -70,41 +70,62 @@ Note that Expectation-Maximization is provably guaranteed to not change after co
 
 ## Analysis
 
+### Cost Analysis
+
 Our reordering removed `K*N*T divs` from the algorithm. In the file `implementations/baseline_old.cpp` we have the original implementation with the `K*N*T divs`. To match the flop count, we did that optimization that removed those flops also in the baseline.
 
 Cost analysis (add, mul and div is one flop) for the original baseline for one iteration:
-forward: `(1 add + 1 mul)*K*N*N*T + (1 add + 2 mults)*K*N*T + (1 add + 2 mults)*K*N + (1 div)*K*T + (1 div)*K`
-backward: `(1 add + 2 muls)*K*N*N*T + (1 mult)*K*N*T`
-compute gamma: `(1 div + 1 mult)*K*N*T + (1 add)*K*N*T`
-compute sigma: `(1 add + 3 mults)*K*N*N*T`
-update init: `(1 add)*K*N + (1 div)*N`
-update trans: `(2 adds)*K*N*N + (1 div)*N*N`
-update emit: `(2 adds)*N*M*K + (1 add)*K*N*T + (1 add)*K*N + (1 div)*N*M`
-neg-log-likelyhood: `K*T*(add)`
+* forward: `(1 add + 1 mul)*K*N*N*T + (1 add + 2 mults)*K*N*T + (1 add + 2 mults)*K*N + (1 div)*K*T + (1 div)*K`
+* backward: `(1 add + 2 muls)*K*N*N*T + (1 mult)*K*N*T`
+* compute gamma: `(1 div + 1 mult)*K*N*T + (1 add)*K*N*T`
+* compute sigma: `(1 add + 3 mults)*K*N*N*T`
+* update init: `(1 add)*K*N + (1 div)*N`
+* update trans: `(2 adds)*K*N*N + (1 div)*N*N`
+* update emit: `(2 adds)*N*M*K + (1 add)*K*N*T + (1 add)*K*N + (1 div)*N*M`
+* neg-log-likelyhood: `K*T*(add)`
 
 total: `K*N*N*T(3 add + 6 mults) + K*N*T(3 add + 4 mult + div) + K*N(3 add + 2 mult) + K*T(div + add) + K*(1 div) + K*N*N(2 add) + N*N*(div) + K*N*M(2 add) + N*M(1 div)`
 
-adds:  3KNNT + 3KNT + 3KN + KT + 2KNN + 2KNM
-mults: 6KNNT + 4KNT + 2KN
-div:   KNT + KT + K + N + NN + NM
+* adds:  3KNNT + 3KNT + 3KN + KT + 2KNN + 2KNM
+* mults: 6KNNT + 4KNT + 2KN
+* div:   KNT + KT + K + N + NN + NM
 
 For the new baseline with the reordering optimization:
-forward: `(1 add + 1 mul)*K*N*N*T + (1 add + 2 mults)*K*N*T + (1 add + 2 mults)*K*N + (1 div)*K*T + (1 div)*K`
-backward: `(1 add + 2 muls)*K*N*N*T + (2 mult)*K*N*T`
-compute gamma: `(1 add)*K*N*T`
-compute sigma: `(1 add + 3 mults)*K*N*N*T`
-update init: `(1 add)*K*N + (1 div)*N`
-update trans: `(2 adds)*K*N*N + (1 div)*N*N`
-update emit: `(2 adds)*N*M*K + (1 add)*K*N*T + (1 add)*K*N + (1 div)*N*M`
-neg-log-likelyhood: `K*T*(add)`
+* forward: `(1 add + 1 mul)*K*N*N*T + (1 add + 2 mults)*K*N*T + (1 add + 2 mults)*K*N + (1 div)*K*T + (1 div)*K`
+* backward: `(1 add + 2 muls)*K*N*N*T + (2 mult)*K*N*T`
+* compute gamma: `(1 add)*K*N*T`
+* compute sigma: `(1 add + 3 mults)*K*N*N*T`
+* update init: `(1 add)*K*N + (1 div)*N`
+* update trans: `(2 adds)*K*N*N + (1 div)*N*N`
+* update emit: `(2 adds)*N*M*K + (1 add)*K*N*T + (1 add)*K*N + (1 div)*N*M`
+* neg-log-likelyhood: `K*T*(add)`
 
 total: `K*N*N*T(3 add + 6 mults) + K*N*T(3 add + 4 mult) + K*N(3 add + 2 mult) + K*T(div + add) + K*(1 div) + K*N*N(2 add) + N*N*(div) + K*N*M(2 add) + N*M(1 div)`
 
-adds:  3KNNT + 3KNT + 3KN + KT + 2KNN + 2KNM
-mults: 6KNNT + 4KNT + 2KN
-div:   KT + K + N + NN + NM
+* adds:  3KNNT + 3KNT + 3KN + KT + 2KNN + 2KNM
+* mults: 6KNNT + 4KNT + 2KN
+* div:   KT + K + N + NN + NM
 
+### Memory Usage
 
+The BWdata struct itself is `144 bytes` in size. The hole struct is loaded at least once per execution of the algorithm as the adresses of the arrays need to be resolved.
+
+This are the sizes of the arrays in the BWdata struct. Their sizes are given in doubles, thus to get bytes multiply with 8.
+
+* init\_prob: `N`
+* trans\_prob: `N*N`
+* emit\_prob: `N*M`
+* observation: `K*T`
+* neg\_log\_likelihood: `max_iterations`
+* c\_norm: `K*T`
+* alpha: `K*T*N`
+* beta: `K*T*N`
+* gamma: `K*T*N`
+* sigma: `K*T*N*N`
+* gamma\_sum: `K*N`
+* sigma\_sum: `K*N*N`
+
+So the total is: `(N + N*N + N*M + 2*K*T + max_iterations + 3*K*T*N + K*T*N*N + K*N + K*N*N)*8 + 144' bytes.
 
 ## Verification
 
