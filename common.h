@@ -25,7 +25,7 @@
 #include <cassert>
 #include <immintrin.h>
 
-#define EPSILON 1e-6
+#define EPSILON 1e-4
 
 /**
  * Struct containing all data for the Baum-Welch algorithm

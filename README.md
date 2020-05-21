@@ -55,7 +55,7 @@ Starting with a baseline version, we implement various optimizations to signific
 
 K >= 16 and divisible by 16
 
-T >= 18 and congruent to 2 modulo 16 [T = 2 (mod 16)]
+T >= 32 and divisible by 16
 
 N >= 16 and divisible by 16
 
@@ -63,7 +63,7 @@ M >= 16 and divisible by 16
 
 This is sufficiently large to take most to all optimization possibilities into account.
 
-Furthermore, to check equality for doubles, we use EPSILON 1e-6, to not get caught up in numerical instabilities and other sources of randomness.
+Furthermore, to check equality for doubles, we use EPSILON 1e-4, to not get caught up in numerical instabilities and other sources of randomness.
 
 Lastly, we omitted the convergence criterion by the minimization of the monotonously decreasing negative log likelihood sequence, because it adds an unnecessary source of randomness.
 Note that Expectation-Maximization is provably guaranteed to not change after convergence, so running more than fewer iterations causes no harm, except for overfitting (irrelevant for our purposes) and increased runtime (wanted for benchmarking).
@@ -196,7 +196,7 @@ https://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20a
 
 ### "scalar_optimized.cpp" Implementation
 
-TODO
+Partial to full vectorization with AVX and FMA Intel intrinsics.
 
 ### "vector_optimized.cpp" Implementation
 
