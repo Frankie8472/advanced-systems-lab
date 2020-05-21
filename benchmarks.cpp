@@ -55,7 +55,7 @@ total: (1 add + 1 mul)*K*N²*T + (2 add + 5 mul)*K*N²*(T-1) + (2 adds)*K*N² + 
 size_t flops;
 
 // adjust max_iterations if it's too slow
-size_t max_iterations = 100;
+size_t max_iterations = 500;
 
 void perf_test(compute_bw_func func, const BWdata& bw) {
     double cycles = 0.;

@@ -22,10 +22,7 @@
 
 #include <cmath>
 #include <cstring>
-//#include <immintrin.h>
-
 #include "../common.h"
-//#include "../helper_utilities.h"
 
 static void forward_step(const BWdata& bw);
 static void backward_step(const BWdata& bw);
@@ -130,7 +127,7 @@ size_t comp_bw_vector_optimized(const BWdata& bw){
         }
         bw.neg_log_likelihoods[iter] = neg_log_likelihood_sum;
 
-        if (first && iter > 0 && fabs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < 1e-12){
+        if (first && iter > 0 && fabs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < EPSILON){
             first = false;
             res = itera;
         }
