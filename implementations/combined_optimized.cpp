@@ -507,6 +507,7 @@ static size_t comp_bw_combined(const BWdata& bw){
         for (size_t k = 0; k < bw.K; k++) {
             // Need to do this in blocks to prevent the numbers from getting too big
             size_t t_block = 0;
+            // Found by experiments
             #define T_BLOCK_SIZE 64
             for (t_block = 0; t_block + T_BLOCK_SIZE < bw.T; t_block+=T_BLOCK_SIZE) {
                 __m256d mult = _mm256_set1_pd(1);
@@ -544,7 +545,7 @@ static size_t comp_bw_combined(const BWdata& bw){
 
         if (first && i > 0 && fabs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < EPSILON){
             first = false;
-            res = i;
+            res = i+1;
         }
 
         neg_log_likelihood_sum_old = neg_log_likelihood_sum;

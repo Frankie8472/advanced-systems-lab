@@ -53,7 +53,7 @@ static size_t comp_bw_scalar_unroll(const BWdata& bw){
 
         if (first && i > 0 && fabs(neg_log_likelihood_sum - neg_log_likelihood_sum_old) < EPSILON){
             first = false;
-            res = i;
+            res = i+1;
         }
 
         neg_log_likelihood_sum_old = neg_log_likelihood_sum;

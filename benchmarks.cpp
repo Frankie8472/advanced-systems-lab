@@ -22,6 +22,10 @@
 #include <vector>
 #include <set>
 #include <getopt.h>
+#include <iostream>
+#include <fstream>
+#include <sys/stat.h>
+#include <chrono>
 // custom files for the project
 #include "tsc_x86.h"
 #include "helper_utilities.h"
@@ -57,7 +61,13 @@ size_t flops;
 // adjust max_iterations if it's too slow
 size_t max_iterations = 500;
 
-void perf_test(compute_bw_func func, const BWdata& bw) {
+struct perf_result{
+    double cycles;
+    size_t iterations;
+    double performance;
+};
+
+void perf_test(compute_bw_func func, const BWdata& bw, struct perf_result *result = NULL) {
     double cycles = 0.;
     size_t num_runs = 1;
     double perf;
@@ -128,7 +138,7 @@ void perf_test(compute_bw_func func, const BWdata& bw) {
 
     cycles = total_cycles;
     iter = total_iter;
-    perf =  round((100.0 * max_iterations*flops) / cycles) / 100.0;
+    perf = (max_iterations*flops) / cycles;
 
     printf("Total iterations: %ld\n", max_iterations);
     if (iter == 0){
@@ -139,6 +149,99 @@ void perf_test(compute_bw_func func, const BWdata& bw) {
     printf("Flops: %zu\n", max_iterations*flops);
     printf("Cycles: %f\n", round(cycles));
     printf("Performance: %f\n", perf);
+    if(result){
+        result->cycles = cycles;
+        result->iterations = iter;
+        result->performance = perf;
+    }
+}
+
+void perform_measure_and_write_to_file(const std::set<std::string> &sel_impl, const size_t K, const size_t N, const size_t M, const size_t T, const size_t max_iterations, std::ofstream &logfile){
+    printf("Benchmarking with K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
+    flops = 9*T*K*N*N - 5*K*N*N + N*N + 8*T*K*N + 3*K*N + K + 2*K*N*M + 2*T*K + N + N*M;
+    size_t mem = (N + N*N + N*M + 2*K*T + max_iterations + 3*K*T*N + K*T*N*N + K*N + K*N*N)*8;
+    const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
+    initialize_random(bw);
+    printf("Running: %s\n", FuncRegister::baseline_name.c_str());
+    struct perf_result base_res;
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    perf_test(FuncRegister::baseline_func, bw, &base_res);
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count()/1000000.0;
+    logfile << std::fixed << "Baseline" << ";" << K << ";" << N << ";" << M << ";" << T << ";" << max_iterations << ";" << flops << ";" << base_res.cycles << ";" << base_res.iterations << ";" << base_res.performance << ";" << mem <<";" << time << std::endl;
+    printf("\n");
+    for(size_t i = 0; i < FuncRegister::size(); i++){
+        if(sel_impl.empty() || sel_impl.find(FuncRegister::funcs->at(i).name) != sel_impl.end()){
+            // Hacky but it works: Transpose emit_prob
+            if(FuncRegister::funcs->at(i).transpose_emit_prob){
+                double *new_emit_prob = (double *)malloc(bw.N*bw.M * sizeof(double));
+                transpose_matrix(new_emit_prob, bw.emit_prob, bw.N, bw.M);
+                memcpy(bw.emit_prob, new_emit_prob, bw.N*bw.M * sizeof(double));
+                free(new_emit_prob);
+            }
+//
+            printf("Running: %s: %s\n", FuncRegister::funcs->at(i).name.c_str(), FuncRegister::funcs->at(i).description.c_str());
+            struct perf_result result;
+            std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+            perf_test(FuncRegister::funcs->at(i).func, bw, &result);
+            std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+            printf("\n");
+            auto time = std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count()/1000000.0;
+
+            logfile << std::fixed << FuncRegister::funcs->at(i).name << ";" << K << ";" << N << ";" << M << ";" << T << ";" << max_iterations << ";" << flops << ";" << result.cycles << ";" << result.iterations << ";" << result.performance << ";" << mem <<";" << time << std::endl;
+        }
+    }
+    delete &bw;
+}
+
+void make_performance_plot(const std::set<std::string> &sel_impl, const size_t max_iterations){
+    // create log file
+    std::ofstream logfile;
+    struct stat buffer;
+    if(stat("log.csv", &buffer) == 0){
+        printf("File 'log.csv' does already exist! Please rename the existing file and try again\n");
+        exit(-3);
+    }
+    logfile.open("log.csv", std::ios::out);
+    logfile << "Implementation;K;N;M;T;max_iterations;Flops;Cylces;Iterations;Performance;Memory (aprox.)(bytes);Benchmark time(s)" << std::endl;
+
+    size_t K = 16;
+    size_t N = 16;
+    size_t M = 16;
+    size_t T = 32;
+
+    perform_measure_and_write_to_file(sel_impl, K,N,M,T,max_iterations,logfile);
+
+    #define M_TEST_COUNT 3
+    size_t M_tests[] = {32, 64, 128};
+    #define N_TEST_COUNT 3
+    size_t N_tests[] = {32, 48, 64};
+    #define T_TEST_COUNT 3
+    size_t T_tests[] = {64, 128, 192};
+    #define K_TEST_COUNT 3
+    size_t K_tests[] = {32, 64, 128};
+
+    for(size_t i = 0; i < M_TEST_COUNT; i++){
+        perform_measure_and_write_to_file(sel_impl, K,N,M_tests[i],T,max_iterations,logfile);
+    }
+
+    for(size_t i = 0; i < K_TEST_COUNT; i++){
+        perform_measure_and_write_to_file(sel_impl, K_tests[i],N,M,T,max_iterations,logfile);
+    }
+
+    for(size_t i = 0; i < T_TEST_COUNT; i++){
+        perform_measure_and_write_to_file(sel_impl, K,N,M,T_tests[i],max_iterations,logfile);
+    }
+
+    for(size_t i = 0; i < N_TEST_COUNT; i++){
+        perform_measure_and_write_to_file(sel_impl, K,N_tests[i],M,T,max_iterations,logfile);
+    }
+    // Everything
+    for(size_t i=1; i<2; i++){
+        perform_measure_and_write_to_file(sel_impl, K + i*16,N+i*16,M+i*16,T+(i/2)*32,max_iterations,logfile);
+    }
+
+    logfile.close();
 }
 
 static struct option arg_options[] = {
@@ -151,7 +254,6 @@ static struct option arg_options[] = {
     };
 
 int main(int argc, char **argv) {
-
     // randomize seed
     srand(time(NULL));
 
@@ -164,6 +266,8 @@ int main(int argc, char **argv) {
     const size_t N = 16;
     const size_t M = 16;
     const size_t T = 32;
+
+    bool test_mode = false;
 
     // Parse arguments
     while(true){
@@ -178,18 +282,20 @@ int main(int argc, char **argv) {
                 sel_impl.insert(arg);
                 break;
             case 't':
-                printf("This option is not yet implemented.\n");
-                printf(":(\n");
-                exit(-2);
+                printf("Performing Test...\n");
+                printf("Please make sure that this PC is not used by other software ;)\n");
+                printf("This may take some hours...\n\n\n");
+                test_mode = true;
+                break;
             case 'l':
                 printf("Registered functions:\n");
                 FuncRegister::printRegisteredFuncs();
-                exit(0);
+                return 0;
             case 1:
                 max_iterations = atoi(optarg);
                 if(max_iterations % 4 != 0){
                     printf("Error: max_iterations needs to be divisable by 4\n");
-                    exit(-1);
+                    return -1;
                 }
                 break;
             case 'h':
@@ -203,9 +309,9 @@ int main(int argc, char **argv) {
                                  "\n  \t\t\t\t always run.\n");
                 printf("      --list\t\t\tLists all available implementations and exits\n");
                 printf("      --max-iterations <value>\tSets the max-iteration to a value\n");
-                exit(0);
+                return 0;
             case '?':
-                exit(-1);
+                return -1;
             default:
                 printf("argument not supported\n");
                 break;
@@ -213,30 +319,34 @@ int main(int argc, char **argv) {
 
     }
 
-    printf("Benchmarking with K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
+    if(test_mode){
+        make_performance_plot(sel_impl, max_iterations);
+    } else {
+        printf("Benchmarking with K = %zu, N = %zu, M = %zu, T = %zu and max_iterations = %zu\n", K, N, M, T, max_iterations);
 
-    flops = 9*T*K*N*N - 5*K*N*N + N*N + 8*T*K*N + 3*K*N + K + 2*K*N*M + 2*T*K + N + N*M;
+        flops = 9*T*K*N*N - 5*K*N*N + N*N + 8*T*K*N + 3*K*N + K + 2*K*N*M + 2*T*K + N + N*M;
 
-    const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
-    initialize_random(bw);
-    printf("Running: %s\n", FuncRegister::baseline_name.c_str());
-    perf_test(FuncRegister::baseline_func, bw);
-    printf("\n");
-    for(size_t i = 0; i < FuncRegister::size(); i++){
-        if(sel_impl.empty() || sel_impl.find(FuncRegister::funcs->at(i).name) != sel_impl.end()){
+        const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
+        initialize_random(bw);
+        printf("Running: %s\n", FuncRegister::baseline_name.c_str());
+        //perf_test(FuncRegister::baseline_func, bw);
+        printf("\n");
+        for(size_t i = 0; i < FuncRegister::size(); i++){
+            if(sel_impl.empty() || sel_impl.find(FuncRegister::funcs->at(i).name) != sel_impl.end()){
 
-            // Hacky but it works: Transpose emit_prob
-            if(FuncRegister::funcs->at(i).transpose_emit_prob){
-                double *new_emit_prob = (double *)malloc(bw.N*bw.M * sizeof(double));
-                transpose_matrix(new_emit_prob, bw.emit_prob, bw.N, bw.M);
-                memcpy(bw.emit_prob, new_emit_prob, bw.N*bw.M * sizeof(double));
-                free(new_emit_prob);
+                // Hacky but it works: Transpose emit_prob
+                if(FuncRegister::funcs->at(i).transpose_emit_prob){
+                    double *new_emit_prob = (double *)malloc(bw.N*bw.M * sizeof(double));
+                    transpose_matrix(new_emit_prob, bw.emit_prob, bw.N, bw.M);
+                    memcpy(bw.emit_prob, new_emit_prob, bw.N*bw.M * sizeof(double));
+                    free(new_emit_prob);
+                }
+
+                printf("Running: %s: %s\n", FuncRegister::funcs->at(i).name.c_str(), FuncRegister::funcs->at(i).description.c_str());
+                perf_test(FuncRegister::funcs->at(i).func, bw);
+                printf("\n");
             }
-
-            printf("Running: %s: %s\n", FuncRegister::funcs->at(i).name.c_str(), FuncRegister::funcs->at(i).description.c_str());
-            perf_test(FuncRegister::funcs->at(i).func, bw);
-            printf("\n");
         }
+        delete &bw;
     }
-    delete &bw;
 }
