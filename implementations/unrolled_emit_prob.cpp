@@ -32,7 +32,8 @@ static size_t comp_bw_emit_unrolled(const BWdata& bw);
 
 
 REGISTER_FUNCTION(comp_bw_emit_unrolled, "unroll-emitprob", "Unrolled ");
-
+static double* denominator_sum = nullptr;
+static double* numerator_sum = nullptr;
 
 size_t comp_bw_emit_unrolled(const BWdata& bw){
 
@@ -40,6 +41,8 @@ size_t comp_bw_emit_unrolled(const BWdata& bw){
     size_t res = 0;
     double neg_log_likelihood_sum_old = 0; // Does not have to be initialized as it will be if and only if i > 0
     bool first = true;
+    denominator_sum = (double *)aligned_alloc(32,bw.N * sizeof(double));
+    numerator_sum = (double *)aligned_alloc(32,bw.N*bw.M * sizeof(double));
 
     // run for all iterations
     for (size_t i = 0; i < bw.max_iterations; i++) {
@@ -70,6 +73,8 @@ size_t comp_bw_emit_unrolled(const BWdata& bw){
         neg_log_likelihood_sum_old = neg_log_likelihood_sum;
 
     }
+    free(denominator_sum);
+    free(numerator_sum);
 
     return res;
 }
@@ -211,8 +216,6 @@ inline void update_emit_prob(const BWdata& bw) {
     double denominator_sum0, denominator_sum1, denominator_sum2, denominator_sum3, denominator_sum4, denominator_sum5, denominator_sum6, denominator_sum7;
     double ggamma_cond_sum_tot0, ggamma_cond_sum_tot1, ggamma_cond_sum_tot2, ggamma_cond_sum_tot3;
     double ggamma_cond_sum0, ggamma_cond_sum1, ggamma_cond_sum2, ggamma_cond_sum3;
-    double* denominator_sum = (double *)aligned_alloc(32,bw.N * sizeof(double));
-    double* numerator_sum = (double *)aligned_alloc(32,bw.N*bw.M * sizeof(double));
     
     // add last bw.T-step to bw.gamma_sum
     for (size_t k = 0; k < bw.K; k++) {
@@ -321,6 +324,4 @@ inline void update_emit_prob(const BWdata& bw) {
             bw.emit_prob[n*bw.M + m+3] = numerator_sum[n*bw.M + m+3] * denominator_sum_inv;
         }
     }
-    free(denominator_sum);
-    free(numerator_sum);
 }

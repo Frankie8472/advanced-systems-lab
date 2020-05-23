@@ -31,11 +31,15 @@ static size_t comp_bw_scalar_unroll(const BWdata& bw);
 
 REGISTER_FUNCTION(comp_bw_scalar_unroll, "other-unroll", "Another approach to unrolling the code");
 
+static double* denominator_sum = nullptr;
+static double* numerator_sum = nullptr;
 
 static size_t comp_bw_scalar_unroll(const BWdata& bw){
     size_t res = 0;
     double neg_log_likelihood_sum, neg_log_likelihood_sum_old = 0; // Does not have to be initialized as it will be if and only if i > 0
     bool first = true;
+    denominator_sum = (double *)aligned_alloc(32,bw.N * sizeof(double));
+    numerator_sum = (double *)aligned_alloc(32,bw.N*bw.M * sizeof(double));
 
     // run for all iterations
     for (size_t i = 0; i < bw.max_iterations; i++) {
@@ -62,6 +66,8 @@ static size_t comp_bw_scalar_unroll(const BWdata& bw){
         update_trans_prob(bw);
         update_emit_prob(bw);
     }
+    free(denominator_sum);
+    free(numerator_sum);
     return res;
 }
 
@@ -382,7 +388,6 @@ static inline void update_trans_prob(const BWdata& bw) {
     //Init (init_prob)
     double g0_sum, denominator_sum_n, denominator_sum_inv;
     double numerator_sum0, numerator_sum1, numerator_sum2, numerator_sum3;
-    double* denominator_sum = (double *)aligned_alloc(32, bw.N*sizeof(double));
     double K_inv = 1.0/bw.K;
 
     for (size_t n = 0; n < bw.N; n++) {
@@ -421,7 +426,6 @@ static inline void update_trans_prob(const BWdata& bw) {
             bw.trans_prob[n0*bw.N + n1+3] = numerator_sum3*denominator_sum[n0];
         }
     }
-    free(denominator_sum);
 }
 
 
@@ -430,8 +434,7 @@ static inline void update_emit_prob(const BWdata& bw) {
     double denominator_sum0, denominator_sum1, denominator_sum2, denominator_sum3, denominator_sum4, denominator_sum5, denominator_sum6, denominator_sum7;
     double ggamma_cond_sum_tot0, ggamma_cond_sum_tot1, ggamma_cond_sum_tot2, ggamma_cond_sum_tot3;
     double ggamma_cond_sum0, ggamma_cond_sum1, ggamma_cond_sum2, ggamma_cond_sum3;
-    double* denominator_sum = (double *)aligned_alloc(32,bw.N * sizeof(double));
-    double* numerator_sum = (double *)aligned_alloc(32,bw.N*bw.M * sizeof(double));
+
 
     // add last bw.T-step to bw.gamma_sum
     for (size_t k = 0; k < bw.K; k++) {
@@ -540,6 +543,4 @@ static inline void update_emit_prob(const BWdata& bw) {
             bw.emit_prob[n*bw.M + m+3] = numerator_sum[n*bw.M + m+3] * denominator_sum_inv;
         }
     }
-    free(denominator_sum);
-    free(numerator_sum);
 }

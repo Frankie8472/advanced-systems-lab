@@ -210,16 +210,16 @@ void make_performance_plot(const std::set<std::string> &sel_impl, const size_t m
     size_t M = 16;
     size_t T = 32;
 
-    perform_measure_and_write_to_file(sel_impl, K,N,M,T,max_iterations,logfile);
+    //perform_measure_and_write_to_file(sel_impl, K,N,M,T,max_iterations,logfile);
 
-    #define M_TEST_COUNT 3
-    size_t M_tests[] = {32, 64, 128};
-    #define N_TEST_COUNT 3
-    size_t N_tests[] = {32, 48, 64};
-    #define T_TEST_COUNT 3
-    size_t T_tests[] = {64, 128, 192};
-    #define K_TEST_COUNT 3
-    size_t K_tests[] = {32, 64, 128};
+    #define M_TEST_COUNT 0
+    size_t M_tests[] = {256, 512};
+    #define N_TEST_COUNT 1
+    size_t N_tests[] = {112};
+    #define T_TEST_COUNT 0
+    size_t T_tests[] = {96, 192, 256, 320};
+    #define K_TEST_COUNT 0
+    size_t K_tests[] = {192, 256};
 
     for(size_t i = 0; i < M_TEST_COUNT; i++){
         perform_measure_and_write_to_file(sel_impl, K,N,M_tests[i],T,max_iterations,logfile);
@@ -237,7 +237,7 @@ void make_performance_plot(const std::set<std::string> &sel_impl, const size_t m
         perform_measure_and_write_to_file(sel_impl, K,N_tests[i],M,T,max_iterations,logfile);
     }
     // Everything
-    for(size_t i=1; i<2; i++){
+    for(size_t i=2; i<3; i++){
         perform_measure_and_write_to_file(sel_impl, K + i*16,N+i*16,M+i*16,T+(i/2)*32,max_iterations,logfile);
     }
 
@@ -329,7 +329,7 @@ int main(int argc, char **argv) {
         const BWdata& bw = *new BWdata(K, N, M, T, max_iterations);
         initialize_random(bw);
         printf("Running: %s\n", FuncRegister::baseline_name.c_str());
-        //perf_test(FuncRegister::baseline_func, bw);
+        perf_test(FuncRegister::baseline_func, bw);
         printf("\n");
         for(size_t i = 0; i < FuncRegister::size(); i++){
             if(sel_impl.empty() || sel_impl.find(FuncRegister::funcs->at(i).name) != sel_impl.end()){
