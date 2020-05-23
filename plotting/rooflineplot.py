@@ -130,13 +130,14 @@ def graphs(filename, K, N, M, T, impls):
                  label=imp["name"] + (" (SIMD)" if imp["vector"] else ""))
 
     plt.legend(loc="upper right")
-    plt.show()
-    #plt.savefig(os.path.join("plots", filename + "_roofline_{}-{}-{}-{}.png".format(K,N,M,T)), orientation='landscape')
-    #plt.close()
+    #plt.show()
+    plt.savefig(os.path.join("roofline", filename + "_roofline_{}-{}-{}-{}.png".format(K,N,M,T)), orientation='landscape')
+    plt.close()
 
 
 def main():
-    graphs("log-normal-gcc.csv", 16, 16, 128, 32, implementations)
+    for file in filenames.keys():
+        graphs(file, 16, 16, 16, 32, implementations)
 
 
 main()
